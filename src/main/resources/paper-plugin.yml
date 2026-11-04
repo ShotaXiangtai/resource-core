@@ -1,0 +1,57 @@
+name: resource-core
+version: '${version}'
+main: jp.vcmc.resourcecore.ResourceCorePlugin
+api-version: '26.3'
+folia-supported: true
+description: 資源ワールドとハブの運用を自動化するプラグイン
+authors:
+  - vcmc
+dependencies:
+  server:
+    Worlds:
+      load: BEFORE
+      required: true
+      join-classpath: true
+permissions:
+  resourcecore.command.hub:
+    description: /hub でハブへ移動する
+    default: true
+  resourcecore.command.resource:
+    description: /resource で資源ワールドへ移動する
+    default: true
+  resourcecore.admin:
+    description: resource-core の全管理機能
+    default: op
+    children:
+      resourcecore.admin.reset: true
+      resourcecore.admin.cancel: true
+      resourcecore.admin.status: true
+      resourcecore.admin.reload: true
+      resourcecore.admin.gui: true
+      resourcecore.admin.sethub: true
+      resourcecore.admin.create: true
+      resourcecore.hub.bypass: true
+  resourcecore.admin.reset:
+    description: /resource-core reset で資源ワールドをリセットする
+    default: op
+  resourcecore.admin.cancel:
+    description: /resource-core cancel でカウントダウンを中止する
+    default: op
+  resourcecore.admin.status:
+    description: /resource-core status で状態を確認する
+    default: op
+  resourcecore.admin.reload:
+    description: /resource-core reload で設定を再読み込みする
+    default: op
+  resourcecore.admin.gui:
+    description: /resource-core admin で管理 GUI を開く
+    default: op
+  resourcecore.admin.sethub:
+    description: /resource-core sethub で今いるワールドをハブに設定する
+    default: op
+  resourcecore.admin.create:
+    description: /resource-core create で未作成の資源ワールドを作成する
+    default: op
+  resourcecore.hub.bypass:
+    description: ハブのブロック保護を無視して建築できる
+    default: op

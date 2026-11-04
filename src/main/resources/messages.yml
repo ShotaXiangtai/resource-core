@@ -1,0 +1,133 @@
+# resource-core メッセージ（MiniMessage 形式）
+# <prefix> はどのメッセージでも使えます。空文字にするとそのメッセージは送信されません。
+prefix: "<gray>[<aqua>資源</aqua>]</gray> "
+
+world-name:
+  overworld: "資源オーバーワールド"
+  nether: "資源ネザー"
+  end: "資源エンド"
+
+time:
+  hour: "時間"
+  minute: "分"
+  second: "秒"
+  never: "なし"
+
+state:
+  missing: "<red>未作成"
+  creating: "<yellow>作成中"
+  ready: "<green>稼働中"
+  countdown: "<gold>リセット予告中 (残り <time>)"
+  resetting: "<red>リセット中"
+
+common:
+  no-permission: "<prefix><red>権限がありません。"
+  player-only: "<prefix><red>このコマンドはプレイヤーのみ実行できます。"
+  label-yes: "<green>はい"
+  label-no: "<red>いいえ"
+
+hub:
+  not-set: "<prefix><red>ハブが設定されていません。"
+  not-loaded: "<prefix><red>ハブのワールドが読み込まれていません。"
+  teleporting: "<prefix><green>ハブへ移動しました。"
+  waiting: "<prefix><yellow><time>後にハブへ移動します。<cancel_hint>"
+  waiting-cancel-hint: "動くとキャンセルされます。"
+  already-waiting: "<prefix><yellow>すでにハブへの移動を待機中です。"
+  cancelled-moved: "<prefix><red>動いたためハブへの移動をキャンセルしました。"
+  set: "<prefix><green><world> をハブに設定しました。"
+  set-default-world: "<prefix><red>サバイバル用のデフォルトワールドはハブにできません。"
+  set-resource-world: "<prefix><red>資源ワールドはハブにできません。"
+
+resource:
+  teleporting: "<prefix><green><world>へ移動しました。"
+  resetting: "<prefix><red><world>はリセット中です。"
+  unavailable: "<prefix><red><world>は現在利用できません。"
+  teleport-failed: "<prefix><red>移動に失敗しました。"
+  portal-resetting: "<prefix><red>行き先の<world>はリセット中です。"
+  portal-unavailable: "<prefix><red>行き先の<world>は現在利用できません。"
+
+login:
+  relocated: "<prefix><yellow>あなたがいたワールドはリセットされたため移動しました。"
+  respawn-cleared: "<prefix><yellow>リセットされたワールドにあったリスポーン地点を解除しました。"
+
+reset:
+  countdown: "<prefix><gold><world>は <yellow><time></yellow> 後にリセットされます。"
+  cancelled: "<prefix><green><world>のリセットは中止されました。"
+  started: "<prefix><red><world>のリセットを開始します。"
+  moved: "<prefix><yellow><world>のリセットのためメインワールドへ移動しました。"
+  kicked: "<red><world>のリセットのため切断しました。再接続できます。"
+  finished: "<prefix><green><world>のリセットが完了しました。"
+  failed: "<prefix><red><world>のリセットに失敗しました。コンソールを確認してください。"
+  accepted-countdown: "<prefix><green><world>のリセットを予告しました（<time>後）。"
+  accepted-now: "<prefix><green><world>のリセットを即時実行します。"
+  skipped-to-now: "<prefix><green><world>のカウントダウンを省略して即時実行します。"
+  already-active: "<prefix><yellow><world>はすでにリセット処理中です。"
+  world-not-loaded: "<prefix><red><world>はまだ作成されていません。"
+  cancel-ok: "<prefix><green><world>のカウントダウンを中止しました。"
+  cancel-none: "<prefix><yellow><world>のカウントダウンは行われていません。"
+  cancel-too-late: "<prefix><red><world>はすでにリセット中のため中止できません。"
+
+create:
+  started: "<prefix><yellow><world>を作成しています…"
+  finished: "<prefix><green><world>を作成しました。"
+  failed: "<prefix><red><world>の作成に失敗しました。コンソールを確認してください。"
+  already-exists: "<prefix><yellow><world>はすでに存在します。"
+
+admin:
+  reload-ok: "<prefix><green>設定を再読み込みしました。"
+  reload-issues: "<prefix><yellow>設定を再読み込みしました（問題 <count> 件。コンソールを確認してください）。"
+  reload-busy: "<prefix><red>リセット処理中は再読み込みできません。"
+  seed-toggled: "<prefix><green><world>の seed 変更を <value> <green>にしました。"
+  status-header: "<prefix><aqua>── resource-core の状態 ──"
+  status-world: "<gray><world> <dark_gray>(<key>)</dark_gray>: <state>"
+  status-world-detail: "<gray>  ロード: <loaded> <gray>/ 人数: <white><players></white> / スポーン: <white><spawn></white> / 前回リセット: <white><last_reset></white> / seed 変更: <change_seed>"
+  status-hub: "<gray>ハブ: <white><hub>"
+  status-hub-unset: "<red>未設定 (/resource-core sethub で設定できます)"
+
+gui:
+  title: "<dark_aqua>resource-core 管理"
+  confirm-title: "<dark_red>リセットの確認"
+  status-name: "<aqua><world>"
+  status-lore:
+    - "<gray>キー: <white><key>"
+    - "<gray>状態: <state>"
+    - "<gray>ロード済み: <loaded>"
+    - "<gray>中にいる人数: <white><players>"
+    - "<gray>前回リセット: <white><last_reset>"
+  reset-name: "<red>即時リセット"
+  reset-lore:
+    - "<gray>確認画面を開きます。"
+    - "<gray>確定すると告知カウントダウン後にリセットします。"
+  cancel-name: "<yellow>カウントダウンを中止"
+  cancel-lore:
+    - "<gray>残り <white><time>"
+  create-name: "<green>ワールドを作成"
+  create-lore:
+    - "<gray>クリックで作成します。"
+  busy-name: "<gray>処理中"
+  busy-lore:
+    - "<gray>状態: <state>"
+  seed-name: "<yellow>リセット時に seed を変える: <value>"
+  seed-lore:
+    - "<gray>クリックで切り替えます。"
+  teleport-name: "<aqua><world>へ移動"
+  teleport-lore:
+    - "<gray>クリックでスポーンへ移動します。"
+  hub-name: "<aqua>ハブへ移動"
+  hub-lore:
+    - "<gray>ハブ: <white><hub>"
+  sethub-name: "<green>今いるワールドをハブに設定"
+  sethub-lore:
+    - "<gray>現在のワールド: <white><current>"
+    - "<gray>ハブ: <white><hub>"
+  close-name: "<gray>閉じる"
+  confirm-name: "<red>確定"
+  confirm-lore:
+    - "<gray><world>のリセットを開始します。"
+    - "<gray>カウントダウン: <white><time>"
+    - "<gray>seed を変える: <value>"
+  confirm-info-name: "<gold><world>をリセットしますか？"
+  confirm-info-lore:
+    - "<gray>中のプレイヤーはメインワールドのスポーンへ移動します。"
+    - "<gray>ワールド内の建築物やアイテムはすべて失われます。"
+  back-name: "<green>戻る"

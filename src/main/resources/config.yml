@@ -1,0 +1,72 @@
+# resource-core 設定ファイル
+# 編集しなくてもすべての機能が動きます。変更後は /resource-core reload で反映されます。
+
+# 資源ワールドの設定
+#   key         : ワールドのキー。Worlds は同じ namespace のワールド同士をポータルで連携するため、
+#                 3 つとも同じ namespace にしてください。minecraft 名前空間は使えません。
+#   seed        : 新規作成するときの seed。空ならランダム。数値以外の文字列はバニラと同じく hashCode を使います。
+#   change-seed : リセットごとに新しいランダム seed にするか。false なら同じ seed で初期状態へ戻します。
+#                 （管理 GUI からも切り替えられます）
+worlds:
+  overworld:
+    key: "resource:overworld"
+    seed: ""
+    change-seed: true
+  nether:
+    key: "resource:nether"
+    seed: ""
+    change-seed: true
+  end:
+    key: "resource:the_end"
+    seed: ""
+    change-seed: true
+
+# リセットの設定（自動実行はしません。管理 GUI またはコマンドから手動で実行します）
+reset:
+  # 告知のタイミング（リセットまでの秒数）とメッセージ。最も大きい秒数がカウントダウンの長さになります。
+  # message を省略すると messages.yml の reset.countdown を使います。MiniMessage 形式で <world> と <time> が使えます。
+  # 空のリスト [] にするとカウントダウンなしで実行します。
+  countdown:
+    - seconds: 300
+    - seconds: 60
+    - seconds: 10
+  # リセット前に Worlds のバックアップ API でバックアップを取るか
+  backup: false
+  # 対象ワールドのプレイヤーを移動させる待ち時間（秒）。過ぎても残っているプレイヤーはキックします。
+  move-timeout-seconds: 30
+
+# ログイン時の扱い
+login:
+  # リセット前に資源ワールドでログアウトした人の移動先
+  #   hub            : ハブ（未設定ならメインワールドのスポーン）
+  #   resource-spawn : そのワールドのスポーン
+  relocate-target: hub
+
+# ハブの設定
+hub:
+  # ハブのワールドキー。既にあるワールドを指定します。空なら未設定です。
+  # /resource-core sethub または管理 GUI で、今いるワールドをハブに設定できます。
+  # minecraft:overworld などのデフォルトワールドと資源ワールドは指定できません。
+  world: ""
+  # ログイン時にハブへ移動するタイミング
+  #   first-join : 初回ログインのみ
+  #   always     : 毎回
+  teleport-on-join: first-join
+  # /hub の待機時間（秒）。0 なら即移動します。
+  teleport-delay-seconds: 0
+  # 待機中に動いたらキャンセルするか
+  cancel-on-move: true
+  # ハブでの保護。true で保護します。
+  # pvp / fall-damage / mob-spawn は OFF のときハブのゲームルールを元の値へ戻します。
+  protection:
+    block-break: true
+    block-place: true
+    pvp: true
+    hunger: true
+    fall-damage: true
+    mob-spawn: true
+
+# 日時の表示
+display:
+  timezone: "Asia/Tokyo"
+  date-format: "yyyy/MM/dd HH:mm"
