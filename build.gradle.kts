@@ -4,21 +4,24 @@ plugins {
 }
 
 group = "jp.vcmc"
-version = "1.0.0"
+version = "1.1.0"
 
 val canvasApiVersion = "26.3.build.1001-stable"
 val worldsVersion = "4.5.0"
+val chunkyVersion = "1.5.66"
 
 repositories {
     mavenCentral()
     maven("https://maven.canvasmc.io/releases")
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://repo.thenextlvl.net/releases")
+    maven("https://repo.codemc.io/repository/maven-releases/")
 }
 
 dependencies {
     compileOnly("io.canvasmc.canvas:canvas-api:$canvasApiVersion")
     compileOnly("net.thenextlvl:worlds:$worldsVersion")
+    compileOnly("org.popcraft:chunky-common:$chunkyVersion")
 
     testImplementation(kotlin("test"))
     testImplementation("io.canvasmc.canvas:canvas-api:$canvasApiVersion")

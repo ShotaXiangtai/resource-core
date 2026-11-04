@@ -132,15 +132,17 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
         plugin.worlds.setPhase(session.type, WorldPhase.RESETTING)
         messages.broadcast(plugin.server, messages.text("reset.started", "world" to messages.worldName(session.type)))
         plugin.logger.info("${session.key.asString()} のリセットを開始します")
-        moveOut(session, world, attempt = 1)
+        // 事前生成が動いたままだとアンロードと競合するので、先に止める。
+        plugin.pregen.cancel(session.key).whenComplete { _, _ ->
+            tasks.global { moveOut(session, world, attempt = 1) }
+        }
     }
 
     /**
-     * 対象ワールドの全員をメインワールドのスポーンへ移動する。
+     * 対象ワールドの全員を、メインワールド側の元いた場所へ移動する。
      * Worlds の regenerate は呼び出し時点で中にいた人を再生成後に戻すので、必ず先に空にする。
      */
     private fun moveOut(session: Session, world: World, attempt: Int) {
-        val spawn = plugin.spawns.survivalSpawn()
         val timeoutMillis = plugin.settings.reset.moveTimeoutSeconds * 1000L
         val deadline = System.currentTimeMillis() + timeoutMillis
         val hardDeadline = deadline + KICK_GRACE_MILLIS
@@ -169,7 +171,7 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
                 }
                 else -> players.forEach { player ->
                     if (inFlight.add(player.uniqueId)) {
-                        tasks.teleport(player, spawn).whenComplete { success, _ ->
+                        tasks.teleport(player, plugin.spawns.returnLocation(player.uniqueId)).whenComplete { success, _ ->
                             inFlight.remove(player.uniqueId)
                             if (success == true) messages.send(player, "reset.moved", "world" to name)
                         }
@@ -246,6 +248,7 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
         plugin.data.setLastReset(session.key, resetAt)
         plugin.data.setSpawnPrepared(session.key, false)
         plugin.data.saveAsync()
+        plugin.worlds.applyBorder(world, session.type)
 
         plugin.spawns.prepare(world, session.type).whenComplete { _, _ ->
             tasks.global {
@@ -256,6 +259,8 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
                 sessions.remove(session.type, session)
                 plugin.logger.info("${session.key.asString()} のリセットが完了しました (seed: ${world.seed})")
                 messages.broadcast(plugin.server, messages.text("reset.finished", "world" to messages.worldName(session.type)))
+                // 移動のブロックを解除してから裏で生成する。生成の完了は待たない。
+                plugin.pregen.start(world, session.type)
             }
         }
     }

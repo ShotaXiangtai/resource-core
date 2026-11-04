@@ -21,6 +21,17 @@ worlds:
     seed: ""
     change-seed: true
 
+# ワールドボーダー（中心は 0, 0）
+border:
+  # オーバーワールドとエンドの半径（ブロック）。ネザーはこの 8 分の 1 になります（10000 なら 1250）。
+  radius: 10000
+
+# Chunky による事前生成（Chunky プラグインが必要です。無ければ事前生成だけ行いません）
+# ワールドの作成時とリセット後に、ボーダーの範囲全体をバックグラウンドで生成します。
+# 生成中もプレイできます。サーバーを再起動すると続きから再開します。
+pregen:
+  enabled: true
+
 # リセットの設定（自動実行はしません。管理 GUI またはコマンドから手動で実行します）
 reset:
   # 告知のタイミング（リセットまでの秒数）とメッセージ。最も大きい秒数がカウントダウンの長さになります。
@@ -38,33 +49,9 @@ reset:
 # ログイン時の扱い
 login:
   # リセット前に資源ワールドでログアウトした人の移動先
-  #   hub            : ハブ（未設定ならメインワールドのスポーン）
+  #   main-world     : メインワールド側の、資源ワールドへ入る直前にいた場所（記録が無ければスポーン）
   #   resource-spawn : そのワールドのスポーン
-  relocate-target: hub
-
-# ハブの設定
-hub:
-  # ハブのワールドキー。既にあるワールドを指定します。空なら未設定です。
-  # /resource-core sethub または管理 GUI で、今いるワールドをハブに設定できます。
-  # minecraft:overworld などのデフォルトワールドと資源ワールドは指定できません。
-  world: ""
-  # ログイン時にハブへ移動するタイミング
-  #   first-join : 初回ログインのみ
-  #   always     : 毎回
-  teleport-on-join: first-join
-  # /hub の待機時間（秒）。0 なら即移動します。
-  teleport-delay-seconds: 0
-  # 待機中に動いたらキャンセルするか
-  cancel-on-move: true
-  # ハブでの保護。true で保護します。
-  # pvp / fall-damage / mob-spawn は OFF のときハブのゲームルールを元の値へ戻します。
-  protection:
-    block-break: true
-    block-place: true
-    pvp: true
-    hunger: true
-    fall-damage: true
-    mob-spawn: true
+  relocate-target: main-world
 
 # 日時の表示
 display:

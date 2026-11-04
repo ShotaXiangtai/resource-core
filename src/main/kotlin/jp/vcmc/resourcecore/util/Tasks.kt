@@ -60,10 +60,19 @@ class Tasks(private val plugin: Plugin) {
     ): ScheduledTask? =
         entity.scheduler.runAtFixedRate(plugin, { block(it) }, Runnable(retired), initialDelayTicks, periodTicks)
 
-    /** プレイヤーを所有リージョンで乗り物から降ろして teleportAsync する。 */
-    fun teleport(player: Player, location: Location, cause: TeleportCause = TeleportCause.PLUGIN): CompletableFuture<Boolean> {
+    /**
+     * プレイヤーを所有リージョンで乗り物から降ろして teleportAsync する。
+     * beforeTeleport は移動の直前に所有リージョンで呼ばれる。
+     */
+    fun teleport(
+        player: Player,
+        location: Location,
+        cause: TeleportCause = TeleportCause.PLUGIN,
+        beforeTeleport: () -> Unit = {},
+    ): CompletableFuture<Boolean> {
         val result = CompletableFuture<Boolean>()
         entity(player, retired = { result.complete(false) }) {
+            beforeTeleport()
             player.leaveVehicle()
             player.teleportAsync(location, cause).whenComplete { success, error ->
                 result.complete(error == null && success == true)

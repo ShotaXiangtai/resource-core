@@ -7,18 +7,20 @@ import jp.vcmc.resourcecore.config.Messages
 import jp.vcmc.resourcecore.config.Settings
 import jp.vcmc.resourcecore.config.SettingsParser
 import jp.vcmc.resourcecore.gui.AdminGui
-import jp.vcmc.resourcecore.hub.HubService
+import jp.vcmc.resourcecore.gui.TravelGui
 import jp.vcmc.resourcecore.listener.CanvasPortalListener
-import jp.vcmc.resourcecore.listener.HubProtectionListener
 import jp.vcmc.resourcecore.listener.LoginListener
 import jp.vcmc.resourcecore.listener.PortalListener
 import jp.vcmc.resourcecore.logic.ResourceType
 import jp.vcmc.resourcecore.reset.ResetManager
 import jp.vcmc.resourcecore.util.Tasks
 import jp.vcmc.resourcecore.util.writeAtomically
+import jp.vcmc.resourcecore.world.PregenService
 import jp.vcmc.resourcecore.world.SpawnService
 import jp.vcmc.resourcecore.world.WorldPhase
 import jp.vcmc.resourcecore.world.WorldService
+import net.kyori.adventure.key.Key
+import org.bukkit.GameRules
 import org.bukkit.command.CommandSender
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
@@ -36,9 +38,11 @@ class ResourceCorePlugin : JavaPlugin() {
         private set
     lateinit var resets: ResetManager
         private set
-    lateinit var hub: HubService
+    lateinit var pregen: PregenService
         private set
     lateinit var gui: AdminGui
+        private set
+    lateinit var travelGui: TravelGui
         private set
 
     @Volatile
@@ -51,20 +55,22 @@ class ResourceCorePlugin : JavaPlugin() {
         saveDefaultConfig()
         tasks = Tasks(this)
         messages = Messages(this)
-        data = DataStore(File(dataFolder, "data.yml"), logger, tasks)
+        data = DataStore(File(dataFolder, "data.yml"), logger, tasks::async)
         data.load()
         worlds = WorldService(this)
         spawns = SpawnService(this)
         resets = ResetManager(this)
-        hub = HubService(this)
+        pregen = PregenService(this)
         gui = AdminGui(this)
+        travelGui = TravelGui(this)
         loadConfiguration()
+        pregen.connect()
 
         val pluginManager = server.pluginManager
         pluginManager.registerEvents(PortalListener(this), this)
         pluginManager.registerEvents(LoginListener(this), this)
-        pluginManager.registerEvents(HubProtectionListener(this), this)
         pluginManager.registerEvents(gui, this)
+        pluginManager.registerEvents(travelGui, this)
         if (isCanvas()) {
             pluginManager.registerEvents(CanvasPortalListener(this), this)
             logger.info("CanvasMC を検出しました。ポータルの行き先を確定するリスナーを有効にします")
@@ -73,24 +79,36 @@ class ResourceCorePlugin : JavaPlugin() {
 
         // ワールドの準備はサーバーが動き始めてからグローバルリージョンで行う。
         tasks.global {
+            restoreLegacyHubRules()
             worlds.ensureAll()
-            hub.applyProtection()
         }
     }
 
     override fun onDisable() {
         if (::resets.isInitialized) resets.shutdown()
-        if (::hub.isInitialized) hub.shutdown()
         if (::data.isInitialized) data.saveNow()
     }
 
-    /** config.yml と messages.yml を再読み込みして、ワールドとハブへ反映する。 */
+    /** 1.0.0 のハブ保護が変更したゲームルールを元に戻す。ハブは廃止したので、そのまま残さない。 */
+    private fun restoreLegacyHubRules() {
+        val record = data.legacyHubRules ?: return
+        val world = runCatching { Key.key(record.world) }.getOrNull()?.let { server.getWorld(it) }
+        if (world == null) {
+            logger.warning("以前のハブ ${record.world} が読み込まれていないため、ゲームルールを元に戻せませんでした: ${record.originals}")
+            return
+        }
+        listOf(GameRules.PVP, GameRules.FALL_DAMAGE, GameRules.SPAWN_MOBS, GameRules.SPAWN_MONSTERS).forEach { rule ->
+            record.originals[rule.key().asString()]?.let { world.setGameRule(rule, it) }
+        }
+        data.legacyHubRules = null
+        data.saveAsync()
+        logger.info("以前のハブ ${record.world} のゲームルールを元に戻しました")
+    }
+
+    /** config.yml と messages.yml を再読み込みして、ワールドへ反映する。 */
     fun reloadAll(): List<ConfigIssue> {
         val issues = loadConfiguration()
-        tasks.global {
-            worlds.ensureAll()
-            hub.applyProtection()
-        }
+        tasks.global { worlds.ensureAll() }
         return issues
     }
 

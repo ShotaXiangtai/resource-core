@@ -1,6 +1,7 @@
 package jp.vcmc.resourcecore.world
 
 import jp.vcmc.resourcecore.ResourceCorePlugin
+import jp.vcmc.resourcecore.config.SavedLocation
 import jp.vcmc.resourcecore.logic.BlockKind
 import jp.vcmc.resourcecore.logic.ResourceType
 import jp.vcmc.resourcecore.logic.SafeSpawn
@@ -11,6 +12,7 @@ import org.bukkit.Material
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.entity.Player
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import kotlin.math.min
 
@@ -18,10 +20,45 @@ import kotlin.math.min
 class SpawnService(private val plugin: ResourceCorePlugin) {
     private val tasks get() = plugin.tasks
 
-    /** サバイバル側（minecraft:overworld）のスポーン。読み取るだけで、変更はしない。 */
-    fun survivalSpawn(): Location {
+    /** メインワールド（minecraft:overworld）のスポーン。読み取るだけで、変更はしない。 */
+    private fun mainWorldSpawn(): Location {
         val overworld = plugin.server.getWorld(MAIN_WORLD) ?: plugin.server.worlds.first()
         return centered(overworld.spawnLocation)
+    }
+
+    /**
+     * メインワールド側へ戻すときの行き先。資源ワールドへ入る直前にいた場所を返す。
+     * 記録が無いか、そのワールドが無ければメインワールドのスポーンを返す。
+     */
+    fun returnLocation(player: UUID): Location {
+        val saved = plugin.data.returnLocation(player) ?: return mainWorldSpawn()
+        val key = runCatching { Key.key(saved.world) }.getOrNull() ?: return mainWorldSpawn()
+        val world = plugin.server.getWorld(key)
+        if (world == null || plugin.worlds.typeOf(key) != null) return mainWorldSpawn()
+        return Location(world, saved.x, saved.y, saved.z, saved.yaw, saved.pitch)
+    }
+
+    /** /main の本体。引数なし・確認なしで即実行する。 */
+    fun teleportToMain(player: Player) {
+        if (plugin.worlds.typeOf(player.world.key()) == null) {
+            plugin.messages.send(player, "main.not-in-resource")
+            return
+        }
+        tasks.teleport(player, returnLocation(player.uniqueId)).thenAccept { success ->
+            plugin.messages.send(player, if (success) "main.teleporting" else "resource.teleport-failed")
+        }
+    }
+
+    /** メインワールド側にいるなら、戻り先として現在地を記録する。所有リージョンから呼ぶこと。 */
+    private fun rememberLocation(player: Player) {
+        val location = player.location
+        val world = location.world ?: return
+        if (plugin.worlds.typeOf(world.key()) != null) return
+        plugin.data.setReturnLocation(
+            player.uniqueId,
+            SavedLocation(world.key().asString(), location.x, location.y, location.z, location.yaw, location.pitch),
+        )
+        plugin.data.saveAsync()
     }
 
     fun spawnOf(world: World, type: ResourceType): Location =
@@ -72,7 +109,7 @@ class SpawnService(private val plugin: ResourceCorePlugin) {
                 plugin.messages.send(player, "resource.resetting", "world" to name)
                 return@whenComplete
             }
-            tasks.teleport(player, spawnOf(world, type)).thenAccept { success ->
+            tasks.teleport(player, spawnOf(world, type), beforeTeleport = { rememberLocation(player) }).thenAccept { success ->
                 plugin.messages.send(player, if (success) "resource.teleporting" else "resource.teleport-failed", "world" to name)
             }
         }

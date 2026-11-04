@@ -22,7 +22,7 @@ class CommandRegistrar(private val plugin: ResourceCorePlugin) {
         plugin.lifecycleManager.registerEventHandler(
             LifecycleEvents.COMMANDS.newHandler { event ->
                 val commands = event.registrar()
-                commands.register(hub().build(), "ハブへ移動します")
+                commands.register(main().build(), "資源ワールドからメインワールドへ戻ります")
                 commands.register(resource().build(), "資源ワールドへ移動します")
                 commands.register(admin().build(), "resource-core の管理コマンド", listOf("rc"))
             },
@@ -40,14 +40,19 @@ class CommandRegistrar(private val plugin: ResourceCorePlugin) {
     }
 
     /** 引数なし・確認なしで即実行する。メニュープラグインから呼ぶ想定。 */
-    private fun hub() = literal("hub", "resourcecore.command.hub").executes { context ->
+    private fun main() = literal("main", "resourcecore.command.main").executes { context ->
         val player = player(context)
-        if (player == null) messages.send(context.source.sender, "common.player-only") else plugin.hub.requestTeleport(player)
+        if (player == null) messages.send(context.source.sender, "common.player-only") else plugin.spawns.teleportToMain(player)
         Command.SINGLE_SUCCESS
     }
 
     private fun resource(): LiteralArgumentBuilder<CommandSourceStack> {
-        val root = literal("resource", "resourcecore.command.resource").executes { teleportToResource(it, ResourceType.OVERWORLD) }
+        // 引数なしは移動 GUI を開く。引数ありはメニュープラグインから呼べるよう、確認なしで即移動する。
+        val root = literal("resource", "resourcecore.command.resource").executes { context ->
+            val player = player(context)
+            if (player == null) messages.send(context.source.sender, "common.player-only") else plugin.travelGui.open(player)
+            Command.SINGLE_SUCCESS
+        }
         ResourceType.entries.forEach { type ->
             root.then(Commands.literal(type.id).executes { teleportToResource(it, type) })
         }
@@ -73,13 +78,6 @@ class CommandRegistrar(private val plugin: ResourceCorePlugin) {
             literal("admin", "resourcecore.admin.gui").executes { context ->
                 val player = player(context)
                 if (player == null) messages.send(context.source.sender, "common.player-only") else plugin.gui.open(player)
-                Command.SINGLE_SUCCESS
-            },
-        )
-        root.then(
-            literal("sethub", "resourcecore.admin.sethub").executes { context ->
-                val player = player(context)
-                if (player == null) messages.send(context.source.sender, "common.player-only") else plugin.hub.setHub(player, player.world)
                 Command.SINGLE_SUCCESS
             },
         )
@@ -158,11 +156,12 @@ class CommandRegistrar(private val plugin: ResourceCorePlugin) {
                 "loaded" to messages.yesNo(world != null),
                 "players" to (world?.playerCount ?: 0).toString(),
                 "spawn" to (world?.spawnLocation?.let { "${it.blockX}, ${it.blockY}, ${it.blockZ}" } ?: "-"),
+                "border" to (world?.worldBorder?.let { (it.size / 2).toInt().toString() } ?: "-"),
+                "pregen" to plugin.pregen.label(settings.world(type).key),
                 "last_reset" to messages.dateTime(plugin.data.lastReset(settings.world(type).key), settings),
                 "change_seed" to messages.yesNo(settings.world(type).changeSeed),
             )
         }
-        messages.send(sender, "admin.status-hub", "hub" to (settings.hub.key?.asString() ?: messages.raw("admin.status-hub-unset")))
         return Command.SINGLE_SUCCESS
     }
 
@@ -187,7 +186,6 @@ class CommandRegistrar(private val plugin: ResourceCorePlugin) {
             "resourcecore.admin.status",
             "resourcecore.admin.reload",
             "resourcecore.admin.gui",
-            "resourcecore.admin.sethub",
             "resourcecore.admin.create",
         )
     }

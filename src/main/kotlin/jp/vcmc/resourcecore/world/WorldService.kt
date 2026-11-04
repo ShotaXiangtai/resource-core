@@ -5,6 +5,7 @@ import jp.vcmc.resourcecore.logic.PortalKind
 import jp.vcmc.resourcecore.logic.PortalRouting
 import jp.vcmc.resourcecore.logic.ResourceType
 import jp.vcmc.resourcecore.logic.TargetState
+import jp.vcmc.resourcecore.logic.borderRadius
 import net.kyori.adventure.key.Key
 import net.thenextlvl.worlds.Dimension
 import net.thenextlvl.worlds.Level
@@ -61,7 +62,19 @@ class WorldService(private val plugin: ResourceCorePlugin) {
             }
         }
         return chain.thenApply {
-            plugin.tasks.global { validateRoutes() }
+            plugin.tasks.global {
+                validateRoutes()
+                plugin.pregen.resumePending()
+            }
+        }
+    }
+
+    /** ワールドボーダーを設定する。ネザーは範囲を揃えるため半径を 8 分の 1 にする。 */
+    fun applyBorder(world: World, type: ResourceType) {
+        plugin.tasks.global {
+            val border = world.worldBorder
+            border.setCenter(0.0, 0.0)
+            border.size = borderRadius(type, plugin.settings.borderRadius) * 2.0
         }
     }
 
@@ -74,6 +87,7 @@ class WorldService(private val plugin: ResourceCorePlugin) {
         val loaded = world(type)
         if (loaded != null) {
             if (phases[type] != WorldPhase.RESETTING) phases[type] = WorldPhase.CREATING
+            applyBorder(loaded, type)
             return prepareSpawnIfNeeded(loaded, type).thenApply {
                 if (phases[type] == WorldPhase.CREATING) phases[type] = WorldPhase.READY
                 loaded
@@ -85,8 +99,9 @@ class WorldService(private val plugin: ResourceCorePlugin) {
         phases[type] = WorldPhase.CREATING
 
         val access = WorldsAccess.access()
+        val isNew = !access.worldRegistry.isRegistered(settings.key)
         val future: CompletableFuture<World> = try {
-            if (access.worldRegistry.isRegistered(settings.key)) {
+            if (!isNew) {
                 plugin.logger.info("${settings.key.asString()} をロードします")
                 access.load(settings.key)
             } else {
@@ -107,13 +122,17 @@ class WorldService(private val plugin: ResourceCorePlugin) {
         }
 
         return future
-            .thenCompose { created -> prepareSpawnIfNeeded(created, type).thenApply { created } }
-            .whenComplete { _, error ->
+            .thenCompose { created ->
+                applyBorder(created, type)
+                prepareSpawnIfNeeded(created, type).thenApply { created }
+            }
+            .whenComplete { created, error ->
                 if (error != null) {
                     plugin.logger.severe("${settings.key.asString()} を用意できませんでした: ${rootMessage(error)}")
                     phases[type] = WorldPhase.MISSING
                 } else {
                     phases[type] = WorldPhase.READY
+                    if (isNew) plugin.tasks.global { plugin.pregen.start(created, type) }
                 }
             }
     }

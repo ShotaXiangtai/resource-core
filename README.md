@@ -1,12 +1,13 @@
 # resource-core
 
-サバイバル・資源・ハブを 1 サーバーに統合した CanvasMC サーバー向けのプラグインです。資源ワールドの作成とリセット、ハブの運用をまとめて行います。
+サバイバルと資源ワールドを 1 サーバーに統合した CanvasMC サーバー向けのプラグインです。資源ワールドの作成、リセット、事前生成をまとめて行います。
 
 - 資源ワールド（オーバーワールド・ネザー・エンド）を起動時に自動作成
 - 資源ワールド同士のポータル連携（サバイバル側には影響なし）
 - 管理 GUI またはコマンドからの手動リセット（告知カウントダウン、キャンセル可）
+- ワールドボーダーの設定と、Chunky による事前生成（生成中もプレイ可能）
+- メインワールドへ戻るコマンドと GUI（資源ワールドへ入る直前にいた場所へ戻る）
 - リセット後の安全対策（古い位置でのログイン、消えたリスポーン地点）
-- ハブへの移動と保護
 - config を編集しなくてもすべて動作
 
 ## 動作環境
@@ -16,16 +17,24 @@
 | サーバー | CanvasMC 26.3（`canvas-build.1001` で確認） |
 | Java | 25 以上 |
 | 必須プラグイン | [Worlds](https://modrinth.com/project/gBIw3Gvy) 4.5.0 |
+| 推奨プラグイン | [Chunky](https://modrinth.com/plugin/chunky) 1.5.66（Paper 版）。無いと事前生成だけ行いません |
 
 Canvas の `EntityPortalAsyncEvent` はある場合だけ使うので、Folia でも読み込める作りですが、確認しているのは Canvas だけです。
 
 ## 導入手順
 
-1. `plugins/` に `worlds-4.5.0-all.jar` と `resource-core-1.0.0.jar` を入れます。
-2. サーバーを起動します。`resource:overworld` / `resource:nether` / `resource:the_end` が自動で作成されます。
-3. ハブにするワールドに移動して `/resource-core sethub` を実行します（管理 GUI からも設定できます）。
+1. `plugins/` に `worlds-4.5.0-all.jar`、`Chunky-Paper-1.5.66.jar`、`resource-core-1.1.0.jar` を入れます。
+2. サーバーを起動します。`resource:overworld` / `resource:nether` / `resource:the_end` が自動で作成され、事前生成が始まります。
 
 追加のワールドは `world/dimensions/<namespace>/<key>/` に作られます。デフォルトワールド（`minecraft:overworld` など）には触りません。
+
+### 1.0.0 からの更新
+
+jar を入れ替えるだけで動きます。ハブは廃止しました。
+
+- ハブ保護が変更していたゲームルールは、次回の起動時に元の値へ戻します。
+- config.yml の `hub:` は無視されます。`login.relocate-target: hub` はメインワールドとして扱います。
+- 既存の資源ワールドには、起動時にボーダーを設定します。事前生成は次のリセットから始まります。今すぐ生成するときは Chunky のコマンドを使ってください。
 
 ## コマンドと権限
 
@@ -33,8 +42,9 @@ Canvas の `EntityPortalAsyncEvent` はある場合だけ使うので、Folia �
 
 | コマンド | 内容 | 権限 | 既定 |
 |---|---|---|---|
-| `/hub` | ハブへ移動 | `resourcecore.command.hub` | 全員 |
-| `/resource [ワールド]` | 資源ワールドのスポーンへ移動（省略時はオーバーワールド） | `resourcecore.command.resource` | 全員 |
+| `/main` | 資源ワールドからメインワールドへ戻る | `resourcecore.command.main` | 全員 |
+| `/resource` | 移動 GUI を開く | `resourcecore.command.resource` | 全員 |
+| `/resource <ワールド>` | 資源ワールドのスポーンへ移動 | `resourcecore.command.resource` | 全員 |
 | `/resource-core reset <ワールド>` | カウントダウンしてからリセット | `resourcecore.admin.reset` | OP |
 | `/resource-core reset <ワールド> --now` | カウントダウンなしで即リセット | `resourcecore.admin.reset` | OP |
 | `/resource-core cancel <ワールド>` | カウントダウンを中止 | `resourcecore.admin.cancel` | OP |
@@ -42,35 +52,60 @@ Canvas の `EntityPortalAsyncEvent` はある場合だけ使うので、Folia �
 | `/resource-core status` | 状態を表示 | `resourcecore.admin.status` | OP |
 | `/resource-core reload` | 設定を再読み込み | `resourcecore.admin.reload` | OP |
 | `/resource-core admin` | 管理 GUI を開く | `resourcecore.admin.gui` | OP |
-| `/resource-core sethub` | 今いるワールドをハブに設定 | `resourcecore.admin.sethub` | OP |
 
-その他の権限:
+`resourcecore.admin` は上記の管理権限すべてを含みます（既定: OP）。
 
-- `resourcecore.admin`: 上記の管理権限すべて（既定: OP）
-- `resourcecore.hub.bypass`: ハブのブロック保護を無視して建築できる（既定: OP）
+`/main` と `/resource <ワールド>` は確認なしで即実行するので、メニュープラグインからそのまま呼べます。
 
-`/hub` と `/resource <ワールド>` は確認なしで即実行するので、メニュープラグインからそのまま呼べます。
+## GUI
 
-## 管理 GUI
+**移動 GUI（全員、`/resource`）:** 「メインワールドへ戻る」と各資源ワールドへの移動ボタンがあります。
 
-`/resource-core admin` で開きます。ワールドごとに次の操作ができます。
+**管理 GUI（OP、`/resource-core admin`）:** ワールドごとに次の操作ができます。
 
-- 状態の確認（存在、ロード状態、中にいる人数、前回リセット日時）
+- 状態の確認（存在、ロード状態、中にいる人数、事前生成の進捗、前回リセット日時）
 - 未作成のワールドの作成
 - リセット（確認画面で「確定」→ カウントダウン。カウントダウン中はキャンセルボタンに変わります）
 - リセット時に seed を変えるかの切り替え
-- 各ワールドとハブへの移動、今いるワールドをハブに設定
+- 各ワールドへの移動、メインワールドへ戻る
+
+## メインワールドへ戻る先
+
+`/resource` や GUI で資源ワールドへ入るとき、それまでいた場所を `plugins/resource-core/data.yml` に記録します。`/main`、リセット時の退避、ログイン時の移動では、スポーンではなくその場所へ戻します。
+
+- サバイバルのネザーやエンドから入った場合は、そこへ戻ります。
+- 記録が無いとき（`/world tp` などで直接入った場合を含む）や、そのワールドが無いときは `minecraft:overworld` のスポーンへ送ります。
+- 資源ワールドで死亡したときのリスポーンは対象外です。通常どおりベッドかメインワールドのスポーンです。
 
 ## リセットの流れ
 
 1. カウントダウンの告知（`--now` なら省略）。この間はキャンセルできます。
 2. 対象ワールドへの移動（`/resource`、ポータル、GUI）を止め、「リセット中です」と表示します。
-3. 中のプレイヤー全員を `minecraft:overworld` のスポーンへ移動します。移動できない人は `move-timeout-seconds` 経過後にキックします。
-4. `reset.backup: true` なら Worlds の API でバックアップを取ります。失敗したらリセットを中止します。
-5. Worlds の `regenerate` を実行します。エンドは `ender_dragon_fight.dat` も削除して、ドラゴン戦を初期状態に戻します。
-6. スポーンを安全な場所に設定してから、移動のブロックを解除します。
+3. 実行中の事前生成を止めます。
+4. 中のプレイヤー全員を元いた場所へ戻します。移動できない人は `move-timeout-seconds` 経過後にキックします。
+5. `reset.backup: true` なら Worlds の API でバックアップを取ります。失敗したらリセットを中止します。
+6. Worlds の `regenerate` を実行します。エンドは `ender_dragon_fight.dat` も削除して、ドラゴン戦を初期状態に戻します。
+7. ボーダーとスポーンを設定して、移動のブロックを解除します。
+8. バックグラウンドで事前生成を始めます。完了を待たずにプレイできます。
 
-リセット日時は `plugins/resource-core/data.yml` に記録されます。
+リセット日時は `data.yml` に記録されます。
+
+## ワールドボーダーと事前生成
+
+- ボーダーの中心は 0, 0 です。半径はオーバーワールドとエンドが `border.radius`、ネザーがその 8 分の 1 です（既定で 10000 / 10000 / 1250）。
+- 事前生成はワールドの作成時とリセット後に、ボーダーの範囲全体を中心から順に行います。
+- 生成はバックグラウンドで進むので、ワールドへの移動はブロックしません。負荷は増えるので、プレイヤーが多い時間帯は重くなる可能性があります。
+- サーバーを再起動すると続きから再開します。
+- 進捗は `/resource-core status` と管理 GUI で確認できます。一時停止や中止は Chunky のコマンド（`/chunky pause`、`/chunky cancel`）でできます。
+- `border.radius` を変えても、実行中や完了済みの事前生成はやり直しません。次のリセットから新しい半径で生成します。
+
+### 時間と容量の目安
+
+半径 10000 はオーバーワールドとエンドで約 156 万チャンク、ネザーで約 2.4 万チャンクです。テスト環境（プレイヤーなし、Windows）では 80〜90 チャンク/秒で、1 ワールド約 5 時間の見積もりでした。容量は生成序盤の実測からの概算で、オーバーワールドが約 20 GB、エンドが約 10 GB です。どちらも最初の数千チャンクからの見積もりで、実際の値は機材や地形で変わります。ディスクの空きには余裕を持たせてください。
+
+### Chunky のログ
+
+Chunky は生成中、ワールドごとに約 1 秒に 1 行の進捗をコンソールへ出します。ログが増えて困るときは `plugins/Chunky/config.yml` の `silent` を `true` にしてください（完了時のログは残ります）。
 
 ## 設定（config.yml）
 
@@ -79,27 +114,23 @@ Canvas の `EntityPortalAsyncEvent` はある場合だけ使うので、Folia �
 | `worlds.<種類>.key` | `resource:overworld` など | ワールドのキー。3 つとも同じ namespace にしてください（下記の注意を参照） |
 | `worlds.<種類>.seed` | 空 | 新規作成時の seed。空ならランダム |
 | `worlds.<種類>.change-seed` | `true` | リセットごとに新しいランダム seed にするか（GUI でも変更可） |
+| `border.radius` | `10000` | ワールドボーダーの半径。ネザーはこの 8 分の 1 |
+| `pregen.enabled` | `true` | Chunky で事前生成するか |
 | `reset.countdown` | 300, 60, 10 秒 | 告知のタイミング。最大の秒数がカウントダウンの長さ。`message` で文面を個別に指定可。`[]` でカウントダウンなし |
 | `reset.backup` | `false` | リセット前にバックアップを取るか |
 | `reset.move-timeout-seconds` | `30` | プレイヤー移動の待ち時間 |
-| `login.relocate-target` | `hub` | リセット前に資源ワールドでログアウトした人の移動先（`hub` / `resource-spawn`）。ハブ未設定ならメインワールドのスポーン |
-| `hub.world` | 空 | ハブのワールドキー。空なら未設定 |
-| `hub.teleport-on-join` | `first-join` | ログイン時にハブへ送るタイミング（`first-join` / `always`） |
-| `hub.teleport-delay-seconds` | `0` | `/hub` の待機時間 |
-| `hub.cancel-on-move` | `true` | 待機中に動いたらキャンセルするか |
-| `hub.protection.*` | すべて `true` | `block-break` / `block-place` / `pvp` / `hunger` / `fall-damage` / `mob-spawn` |
+| `login.relocate-target` | `main-world` | リセット前に資源ワールドでログアウトした人の移動先（`main-world` / `resource-spawn`） |
 | `display.timezone` | `Asia/Tokyo` | 日時表示のタイムゾーン |
 | `display.date-format` | `yyyy/MM/dd HH:mm` | 日時表示の書式 |
 
-- 不正な値はエラーログを出して既定値を使います。サーバーは止まりません。
-- `hub.protection` の `pvp` / `fall-damage` / `mob-spawn` はハブのゲームルールを変更します。元の値は `data.yml` に残し、OFF にしたときやハブを変えたときに戻します。`mob-spawn` はスポナーなどからの湧きも止めますが、コマンドやスポーンエッグ、プラグインによる召喚は止めません。
+不正な値はエラーログを出して既定値を使います。サーバーは止まりません。
 
 ### ワールドキーの注意
 
 Worlds は **同じ namespace のワールド同士** を Environment でポータル連携します。そのため:
 
 - 資源ワールドの 3 つのキーは同じ namespace にしてください。
-- その namespace に、他のワールドを置かないでください。ハブも別の namespace（例: `lobby:hub`）にしてください。
+- その namespace に、他のワールドを置かないでください。
 - 実際の連携先が想定と違うとエラーログを出し、その経路のポータルを無効にします。
 
 メッセージはすべて `messages.yml`（MiniMessage 形式）で変更できます。空文字にすると送信しません。
@@ -124,20 +155,19 @@ Canvas では実際にワールドを移動する直前の `EntityPortalAsyncEve
 ./gradlew test
 ```
 
-カウントダウン、ログイン判定、ポータルの判定、スポーン探索、設定の検証を確認します。
+カウントダウン、ログイン判定、ポータルの判定、スポーン探索、ボーダーの半径、設定の検証、data.yml の保存と読み込みを確認します。
 
 ### 確認済みの項目
 
-Canvas 26.3 build 1001 + Worlds 4.5.0 のサーバーで、コンソールから次を確認しています。
+Canvas 26.3 build 1001 + Worlds 4.5.0 + Chunky 1.5.66 のサーバーで、コンソールから次を確認しています。
 
-- 初回起動で 3 ワールドが作成され、再起動後は再作成されずにロードされる
+- 未編集の config での新規起動で 3 ワールドが作成され、再起動後は再作成されずにロードされる
 - `reset`（カスタムメッセージ含む）、`cancel`、`--now`、カウントダウン中の `--now` による省略、二重実行の拒否
-- 未編集の config での新規起動
 - リセットで seed が変わり、スポーンが設定される。`change-seed: false` なら seed を維持する
 - `reset.backup: true` でバックアップが作成される（サーバーフォルダの `backups/<namespace>/<key>/` に zip）
 - `dragon_killed=1` の状態からのリセットで `ender_dragon_fight.dat` が初期状態に戻る（Worlds 単体では残ることも確認）
-- サバイバル側のスポーンが変わらない
-- ハブのゲームルールの適用と、OFF にしたときの復元
+- ボーダーが 10000 / 1250 / 10000 になり、メインワールドのボーダーは変わらない
+- 事前生成の開始と進捗表示、完了時の処理、事前生成中のリセット、再起動後の再開
 - 不正な設定値のエラーログと既定値への復帰、namespace 不一致でのポータル無効化
 
 ### ゲーム内で確認してほしい項目
@@ -147,7 +177,14 @@ Canvas 26.3 build 1001 + Worlds 4.5.0 のサーバーで、コンソールから
 ワールド移動:
 
 - [ ] `/resource overworld`、`/resource nether`、`/resource end` で各スポーンへ移動できる。エンドでは黒曜石の足場の上に出る
-- [ ] `/hub` でハブへ移動できる。`teleport-delay-seconds: 3` にすると待機し、動くとキャンセルされる
+- [ ] `/resource` で移動 GUI が開き、各ボタンが動く。アイテムを持ち出せない
+- [ ] 資源ワールドで `/main` を実行すると、入る直前の場所へ戻る。再起動を挟んでも同じ
+- [ ] メインワールドで `/main` を実行すると「資源ワールドにいるときだけ使えます」と表示される
+
+事前生成とボーダー:
+
+- [ ] 事前生成中に資源ワールドを歩き回れる。TPS が許容範囲に収まる（`/tps` や spark で確認）
+- [ ] ボーダーの外へ出られない
 
 ポータル:
 
@@ -165,27 +202,25 @@ Canvas 26.3 build 1001 + Worlds 4.5.0 のサーバーで、コンソールから
 
 リセット:
 
-- [ ] 中にいるプレイヤーがメインワールドのスポーンへ移動する
+- [ ] 中にいるプレイヤーが、入る直前の場所へ戻る
 - [ ] 処理中に `/resource` とポータルが止まり、「リセット中です」と表示される
 
 リセット後の安全対策:
 
-- [ ] 資源ワールドでログアウト → リセット → ログインで、ハブ（または設定した移動先）へ送られる
+- [ ] 資源ワールドでログアウト → リセット → ログインで、入る直前の場所（または設定した移動先）へ送られる
 - [ ] リセット後に資源ワールドでログアウトした人は、再ログインしても移動しない
-- [ ] 資源ワールドのベッドでリスポーン地点を設定 → リセット → 死亡で、サバイバルのスポーンでリスポーンする
+- [ ] 資源ワールドのベッドでリスポーン地点を設定 → リセット → 死亡で、メインワールドのスポーンでリスポーンする
 
-ハブと GUI:
+管理 GUI:
 
-- [ ] 初回ログインでハブへ送られる。`always` なら毎回送られる
-- [ ] ハブでブロックの破壊と設置、PvP、空腹、落下ダメージ、Mob の湧きが止まる（`resourcecore.hub.bypass` があれば建築は可能）
-- [ ] 管理 GUI の全ボタンが動く。アイテムを持ち出せない
+- [ ] 全ボタンが動く。アイテムを持ち出せない
 
 ## 既知の制限
 
 - **Worlds は Canvas を公式サポートしていません。** 作者は「Folia と Paper のみサポート」としています。Canvas の更新で動かなくなる可能性があるので、Canvas を更新するときはテストサーバーで確認してください。
 - **Worlds の `regenerate` はファイルの削除に失敗しても警告ログだけで続行します。** リセット後に地形が変わらないときは、Worlds のログを確認してください。
-- **ファイル削除はグローバルリージョンで同期実行されます。** 大きなワールドのリセット中は、グローバルリージョンの処理が一時的に止まる可能性があります。
-- **プレイヤー以外のエンティティのポータル通過は Worlds に任せています。** Canvas 26.2 で Worlds の [Issue #479](https://github.com/TheNextLvl-net/worlds/issues/479) のエラーが報告されています（プレイヤーには影響しない報告内容です）。
+- **ファイル削除はグローバルリージョンで同期実行されます。** 大きなワールドのリセット中は、グローバルリージョンの処理が一時的に止まる可能性があります。事前生成で region ファイルが増えるので、完了後のワールドは特に影響が大きくなる可能性があります。
+- **プレイヤー以外のエンティティのポータル通過は Worlds に任せています。** Canvas 26.2 で Worlds の [Issue #479](https://github.com/TheNextLvl-net/worlds/issues/479) のエラーが報告されています。
 - `/reload` やプラグインの再読み込みには対応していません。設定の反映は `/resource-core reload` を使ってください。カウントダウン中にサーバーを止めると、そのリセットは取り消されます。
 
 ## ビルド
@@ -196,4 +231,4 @@ Java 25 が必要です。
 ./gradlew build
 ```
 
-`build/libs/resource-core-1.0.0.jar` が生成されます（Kotlin 標準ライブラリを同梱）。
+`build/libs/resource-core-1.1.0.jar` が生成されます（Kotlin 標準ライブラリを同梱）。

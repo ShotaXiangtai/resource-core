@@ -105,6 +105,7 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
                         "state" to state,
                         "loaded" to messages.yesNo(world != null),
                         "players" to (world?.playerCount ?: 0).toString(),
+                        "pregen" to plugin.pregen.label(settings.world(type).key),
                         "last_reset" to messages.dateTime(plugin.data.lastReset(settings.world(type).key), settings),
                     ),
                 ),
@@ -128,18 +129,9 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
                 ),
             )
         }
-        val hubName = settings.hub.key?.asString() ?: messages.raw("time.never")
         inv.setItem(
-            SLOT_HUB,
-            item(Material.COMPASS, messages.itemText("gui.hub-name"), messages.itemLore("gui.hub-lore", "hub" to hubName)),
-        )
-        inv.setItem(
-            SLOT_SETHUB,
-            item(
-                Material.BEACON,
-                messages.itemText("gui.sethub-name"),
-                messages.itemLore("gui.sethub-lore", "current" to player.world.key().asString(), "hub" to hubName),
-            ),
+            SLOT_MAIN,
+            item(Material.COMPASS, messages.itemText("gui.main-name"), messages.itemLore("gui.main-lore")),
         )
         inv.setItem(SLOT_CLOSE, item(Material.BARRIER, messages.itemText("gui.close-name"), emptyList()))
     }
@@ -237,13 +229,9 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
 
     private fun onMainClick(player: Player, slot: Int) {
         when (slot) {
-            SLOT_HUB -> {
+            SLOT_MAIN -> {
                 player.closeInventory()
-                plugin.hub.requestTeleport(player)
-                return
-            }
-            SLOT_SETHUB -> {
-                if (requirePermission(player, PERM_SETHUB)) plugin.hub.setHub(player, player.world)
+                plugin.spawns.teleportToMain(player)
                 return
             }
             SLOT_CLOSE -> {
@@ -328,9 +316,8 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
         const val MAIN_SIZE = 54
         const val CONFIRM_SIZE = 27
 
-        const val SLOT_HUB = 46
-        const val SLOT_SETHUB = 49
-        const val SLOT_CLOSE = 52
+        const val SLOT_MAIN = 47
+        const val SLOT_CLOSE = 51
         const val SLOT_CONFIRM = 11
         const val SLOT_CONFIRM_INFO = 13
         const val SLOT_BACK = 15
@@ -339,7 +326,6 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
         const val PERM_RESET = "resourcecore.admin.reset"
         const val PERM_CANCEL = "resourcecore.admin.cancel"
         const val PERM_CREATE = "resourcecore.admin.create"
-        const val PERM_SETHUB = "resourcecore.admin.sethub"
 
         val ICONS = mapOf(
             ResourceType.OVERWORLD to Material.GRASS_BLOCK,

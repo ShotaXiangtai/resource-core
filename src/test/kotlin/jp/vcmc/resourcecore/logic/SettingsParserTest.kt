@@ -24,10 +24,9 @@ class SettingsParserTest {
         assertTrue(settings.world(ResourceType.END).changeSeed)
         assertEquals(listOf(300, 60, 10), settings.reset.countdown.map { it.seconds })
         assertFalse(settings.reset.backup)
-        assertNull(settings.hub.key)
-        assertEquals(HubJoinMode.FIRST_JOIN, settings.hub.joinMode)
-        assertEquals(0, settings.hub.teleportDelaySeconds)
-        assertEquals(RelocateTarget.HUB, settings.relocateTarget)
+        assertEquals(10_000, settings.borderRadius)
+        assertTrue(settings.pregenEnabled)
+        assertEquals(RelocateTarget.MAIN_WORLD, settings.relocateTarget)
         assertEquals("Asia/Tokyo", settings.zone.id)
     }
 
@@ -99,18 +98,26 @@ class SettingsParserTest {
     }
 
     @Test
-    fun `hub cannot be a default or resource world`() {
-        assertNull(parse("hub:\n  world: 'minecraft:overworld'\n").settings.hub.key)
-        assertNull(parse("hub:\n  world: 'resource:nether'\n").settings.hub.key)
-        assertEquals(Key.key("lobby:hub"), parse("hub:\n  world: 'lobby:hub'\n").settings.hub.key)
+    fun `config files from 1_0_0 still load`() {
+        val result = parse("login:\n  relocate-target: hub\nhub:\n  world: 'lobby:hub'\n")
+        assertEquals(RelocateTarget.MAIN_WORLD, result.settings.relocateTarget)
+        assertTrue(result.issues.isEmpty(), result.issues.toString())
     }
 
     @Test
-    fun `invalid choices fall back with an issue`() {
-        val result = parse("hub:\n  teleport-on-join: sometimes\nlogin:\n  relocate-target: moon\n")
-        assertEquals(HubJoinMode.FIRST_JOIN, result.settings.hub.joinMode)
-        assertEquals(RelocateTarget.HUB, result.settings.relocateTarget)
-        assertEquals(2, result.issues.size)
+    fun `invalid relocate target falls back with an issue`() {
+        val result = parse("login:\n  relocate-target: moon\n")
+        assertEquals(RelocateTarget.MAIN_WORLD, result.settings.relocateTarget)
+        assertEquals(1, result.issues.size)
+    }
+
+    @Test
+    fun `invalid border radius falls back with an issue`() {
+        val zero = parse("border:\n  radius: 0\n")
+        assertEquals(10_000, zero.settings.borderRadius)
+        assertEquals("border.radius", zero.issues.single().path)
+        assertEquals(10_000, parse("border:\n  radius: 40000000\n").settings.borderRadius)
+        assertEquals(5_000, parse("border:\n  radius: 5000\n").settings.borderRadius)
     }
 
     @Test
@@ -121,10 +128,9 @@ class SettingsParserTest {
     }
 
     @Test
-    fun `negative numbers fall back`() {
-        val result = parse("hub:\n  teleport-delay-seconds: -1\nreset:\n  move-timeout-seconds: 0\n")
-        assertEquals(0, result.settings.hub.teleportDelaySeconds)
+    fun `invalid move timeout falls back`() {
+        val result = parse("reset:\n  move-timeout-seconds: 0\n")
         assertEquals(30, result.settings.reset.moveTimeoutSeconds)
-        assertEquals(2, result.issues.size)
+        assertEquals(1, result.issues.size)
     }
 }

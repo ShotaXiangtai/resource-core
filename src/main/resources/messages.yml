@@ -20,23 +20,21 @@ state:
   countdown: "<gold>リセット予告中 (残り <time>)"
   resetting: "<red>リセット中"
 
+pregen:
+  running: "<yellow>生成中 <percent>%"
+  waiting: "<yellow>再開待ち"
+  idle: "<gray>なし"
+  no-chunky: "<red>Chunky 未導入"
+
 common:
   no-permission: "<prefix><red>権限がありません。"
   player-only: "<prefix><red>このコマンドはプレイヤーのみ実行できます。"
   label-yes: "<green>はい"
   label-no: "<red>いいえ"
 
-hub:
-  not-set: "<prefix><red>ハブが設定されていません。"
-  not-loaded: "<prefix><red>ハブのワールドが読み込まれていません。"
-  teleporting: "<prefix><green>ハブへ移動しました。"
-  waiting: "<prefix><yellow><time>後にハブへ移動します。<cancel_hint>"
-  waiting-cancel-hint: "動くとキャンセルされます。"
-  already-waiting: "<prefix><yellow>すでにハブへの移動を待機中です。"
-  cancelled-moved: "<prefix><red>動いたためハブへの移動をキャンセルしました。"
-  set: "<prefix><green><world> をハブに設定しました。"
-  set-default-world: "<prefix><red>サバイバル用のデフォルトワールドはハブにできません。"
-  set-resource-world: "<prefix><red>資源ワールドはハブにできません。"
+main:
+  teleporting: "<prefix><green>メインワールドへ戻りました。"
+  not-in-resource: "<prefix><yellow>資源ワールドにいるときだけ使えます。"
 
 resource:
   teleporting: "<prefix><green><world>へ移動しました。"
@@ -80,9 +78,18 @@ admin:
   seed-toggled: "<prefix><green><world>の seed 変更を <value> <green>にしました。"
   status-header: "<prefix><aqua>── resource-core の状態 ──"
   status-world: "<gray><world> <dark_gray>(<key>)</dark_gray>: <state>"
-  status-world-detail: "<gray>  ロード: <loaded> <gray>/ 人数: <white><players></white> / スポーン: <white><spawn></white> / 前回リセット: <white><last_reset></white> / seed 変更: <change_seed>"
-  status-hub: "<gray>ハブ: <white><hub>"
-  status-hub-unset: "<red>未設定 (/resource-core sethub で設定できます)"
+  status-world-detail: "<gray>  ロード: <loaded> <gray>/ 人数: <white><players></white> / スポーン: <white><spawn></white> / ボーダー半径: <white><border></white> / 事前生成: <pregen> <gray>/ 前回リセット: <white><last_reset></white> / seed 変更: <change_seed>"
+
+travel-gui:
+  title: "<dark_aqua>ワールド移動"
+  main-name: "<green>メインワールドへ戻る"
+  main-lore:
+    - "<gray>資源ワールドへ入る直前にいた場所へ戻ります。"
+    - "<gray>コマンド: <white>/main"
+  world-name: "<aqua><world>へ移動"
+  world-lore:
+    - "<gray>状態: <state>"
+    - "<gray>中にいる人数: <white><players>"
 
 gui:
   title: "<dark_aqua>resource-core 管理"
@@ -93,6 +100,7 @@ gui:
     - "<gray>状態: <state>"
     - "<gray>ロード済み: <loaded>"
     - "<gray>中にいる人数: <white><players>"
+    - "<gray>事前生成: <pregen>"
     - "<gray>前回リセット: <white><last_reset>"
   reset-name: "<red>即時リセット"
   reset-lore:
@@ -113,13 +121,9 @@ gui:
   teleport-name: "<aqua><world>へ移動"
   teleport-lore:
     - "<gray>クリックでスポーンへ移動します。"
-  hub-name: "<aqua>ハブへ移動"
-  hub-lore:
-    - "<gray>ハブ: <white><hub>"
-  sethub-name: "<green>今いるワールドをハブに設定"
-  sethub-lore:
-    - "<gray>現在のワールド: <white><current>"
-    - "<gray>ハブ: <white><hub>"
+  main-name: "<aqua>メインワールドへ戻る"
+  main-lore:
+    - "<gray>資源ワールドへ入る直前にいた場所へ戻ります。"
   close-name: "<gray>閉じる"
   confirm-name: "<red>確定"
   confirm-lore:
@@ -128,6 +132,6 @@ gui:
     - "<gray>seed を変える: <value>"
   confirm-info-name: "<gold><world>をリセットしますか？"
   confirm-info-lore:
-    - "<gray>中のプレイヤーはメインワールドのスポーンへ移動します。"
+    - "<gray>中のプレイヤーはメインワールドへ移動します。"
     - "<gray>ワールド内の建築物やアイテムはすべて失われます。"
   back-name: "<green>戻る"

@@ -1,7 +1,6 @@
 package jp.vcmc.resourcecore.config
 
 import jp.vcmc.resourcecore.logic.CountdownStep
-import jp.vcmc.resourcecore.logic.HubJoinMode
 import jp.vcmc.resourcecore.logic.RelocateTarget
 import jp.vcmc.resourcecore.logic.ResourceType
 import net.kyori.adventure.key.InvalidKeyException
@@ -15,27 +14,11 @@ data class WorldSettings(val type: ResourceType, val key: Key, val seed: Long?, 
 
 data class ResetSettings(val countdown: List<CountdownStep>, val backup: Boolean, val moveTimeoutSeconds: Int)
 
-data class HubProtection(
-    val blockBreak: Boolean,
-    val blockPlace: Boolean,
-    val pvp: Boolean,
-    val hunger: Boolean,
-    val fallDamage: Boolean,
-    val mobSpawn: Boolean,
-)
-
-data class HubSettings(
-    val key: Key?,
-    val joinMode: HubJoinMode,
-    val teleportDelaySeconds: Int,
-    val cancelOnMove: Boolean,
-    val protection: HubProtection,
-)
-
 data class Settings(
     val worlds: Map<ResourceType, WorldSettings>,
     val reset: ResetSettings,
-    val hub: HubSettings,
+    val borderRadius: Int,
+    val pregenEnabled: Boolean,
     val relocateTarget: RelocateTarget,
     val zone: ZoneId,
     val dateFormat: DateTimeFormatter,
@@ -50,25 +33,28 @@ data class ConfigIssue(val path: String, val message: String)
 data class ParsedSettings(val settings: Settings, val issues: List<ConfigIssue>)
 
 object SettingsParser {
-    /** サバイバル用のデフォルトワールド。資源ワールドにもハブにも使わせない。 */
-    val DEFAULT_WORLD_KEYS: Set<Key> = setOf(Key.key("overworld"), Key.key("the_nether"), Key.key("the_end"))
-
     private val DEFAULT_COUNTDOWN = listOf(CountdownStep(300), CountdownStep(60), CountdownStep(10))
+    private const val DEFAULT_BORDER_RADIUS = 10_000
+    // バニラのワールドボーダーの最大サイズ 59,999,968 の半分。
+    private const val MAX_BORDER_RADIUS = 29_999_984
     private const val DEFAULT_ZONE = "Asia/Tokyo"
     private const val DEFAULT_DATE_FORMAT = "yyyy/MM/dd HH:mm"
 
-    enum class HubKeyProblem { DEFAULT_WORLD, RESOURCE_WORLD }
-
     fun parse(config: ConfigurationSection): ParsedSettings {
         val issues = mutableListOf<ConfigIssue>()
-        val worlds = parseWorlds(config, issues)
         val settings = Settings(
-            worlds = worlds,
+            worlds = parseWorlds(config, issues),
             reset = parseReset(config, issues),
-            hub = parseHub(config, worlds, issues),
+            borderRadius = parseBorderRadius(config, issues),
+            pregenEnabled = config.getBoolean("pregen.enabled", true),
             relocateTarget = parseChoice(
-                config, "login.relocate-target", RelocateTarget.HUB, issues,
-                mapOf("hub" to RelocateTarget.HUB, "resource-spawn" to RelocateTarget.RESOURCE_SPAWN),
+                config, "login.relocate-target", RelocateTarget.MAIN_WORLD, issues,
+                mapOf(
+                    "main-world" to RelocateTarget.MAIN_WORLD,
+                    "resource-spawn" to RelocateTarget.RESOURCE_SPAWN,
+                    // 1.0.0 の設定ファイルをそのまま使えるよう残す。ハブは廃止したのでメインワールドへ送る。
+                    "hub" to RelocateTarget.MAIN_WORLD,
+                ),
             ),
             zone = parseZone(config, issues),
             dateFormat = parseDateFormat(config, issues),
@@ -76,17 +62,18 @@ object SettingsParser {
         return ParsedSettings(settings, issues)
     }
 
-    fun hubKeyProblem(key: Key, resourceKeys: Collection<Key>): HubKeyProblem? = when (key) {
-        in DEFAULT_WORLD_KEYS -> HubKeyProblem.DEFAULT_WORLD
-        in resourceKeys -> HubKeyProblem.RESOURCE_WORLD
-        else -> null
-    }
-
     /** 数値はそのまま、文字列はバニラと同じく hashCode を seed にする。空なら未指定（ランダム）。 */
     fun parseSeed(raw: String?): Long? {
         val text = raw?.trim().orEmpty()
         if (text.isEmpty()) return null
         return text.toLongOrNull() ?: text.hashCode().toLong()
+    }
+
+    private fun parseBorderRadius(config: ConfigurationSection, issues: MutableList<ConfigIssue>): Int {
+        val radius = config.getInt("border.radius", DEFAULT_BORDER_RADIUS)
+        if (radius in 1..MAX_BORDER_RADIUS) return radius
+        issues += ConfigIssue("border.radius", "$radius は 1〜$MAX_BORDER_RADIUS にしてください。既定値 $DEFAULT_BORDER_RADIUS を使います")
+        return DEFAULT_BORDER_RADIUS
     }
 
     private fun parseWorlds(config: ConfigurationSection, issues: MutableList<ConfigIssue>): Map<ResourceType, WorldSettings> {
@@ -180,61 +167,6 @@ object SettingsParser {
             steps[seconds] = CountdownStep(seconds, (entry["message"] as? String)?.takeIf { it.isNotBlank() })
         }
         return steps.values.sortedByDescending { it.seconds }
-    }
-
-    private fun parseHub(
-        config: ConfigurationSection,
-        worlds: Map<ResourceType, WorldSettings>,
-        issues: MutableList<ConfigIssue>,
-    ): HubSettings {
-        var delay = config.getInt("hub.teleport-delay-seconds", 0)
-        if (delay < 0) {
-            issues += ConfigIssue("hub.teleport-delay-seconds", "$delay は 0 以上にしてください。0 を使います")
-            delay = 0
-        }
-        return HubSettings(
-            key = parseHubKey(config.getString("hub.world"), worlds, issues),
-            joinMode = parseChoice(
-                config, "hub.teleport-on-join", HubJoinMode.FIRST_JOIN, issues,
-                mapOf("first-join" to HubJoinMode.FIRST_JOIN, "always" to HubJoinMode.ALWAYS),
-            ),
-            teleportDelaySeconds = delay,
-            cancelOnMove = config.getBoolean("hub.cancel-on-move", true),
-            protection = HubProtection(
-                blockBreak = config.getBoolean("hub.protection.block-break", true),
-                blockPlace = config.getBoolean("hub.protection.block-place", true),
-                pvp = config.getBoolean("hub.protection.pvp", true),
-                hunger = config.getBoolean("hub.protection.hunger", true),
-                fallDamage = config.getBoolean("hub.protection.fall-damage", true),
-                mobSpawn = config.getBoolean("hub.protection.mob-spawn", true),
-            ),
-        )
-    }
-
-    private fun parseHubKey(
-        raw: String?,
-        worlds: Map<ResourceType, WorldSettings>,
-        issues: MutableList<ConfigIssue>,
-    ): Key? {
-        val text = raw?.trim().orEmpty()
-        if (text.isEmpty()) return null
-        val key = try {
-            Key.key(text)
-        } catch (_: InvalidKeyException) {
-            issues += ConfigIssue("hub.world", "'$text' はワールドキーとして不正です。ハブ未設定として扱います")
-            return null
-        }
-        return when (hubKeyProblem(key, worlds.values.map { it.key })) {
-            HubKeyProblem.DEFAULT_WORLD -> {
-                issues += ConfigIssue("hub.world", "'$text' はサバイバル用のデフォルトワールドです。ハブ未設定として扱います")
-                null
-            }
-            HubKeyProblem.RESOURCE_WORLD -> {
-                issues += ConfigIssue("hub.world", "'$text' は資源ワールドです。ハブ未設定として扱います")
-                null
-            }
-            null -> key
-        }
     }
 
     private fun parseZone(config: ConfigurationSection, issues: MutableList<ConfigIssue>): ZoneId {
