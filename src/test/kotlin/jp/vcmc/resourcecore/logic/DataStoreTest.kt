@@ -41,6 +41,73 @@ class DataStoreTest {
     }
 
     @Test
+    fun `resource locations survive a save and load per world`() {
+        val file = tempFile()
+        val player = UUID.randomUUID()
+        val overworld = SavedLocation("resource:overworld", 1.5, 70.0, 2.5, 10f, 20f)
+        val end = SavedLocation("resource:the.end", 100.5, 49.0, 0.5, 90f, 0f)
+
+        val first = store(file)
+        first.setResourceLocation(player, overworld)
+        first.setResourceLocation(player, end)
+        first.saveNow()
+
+        val second = store(file)
+        second.load()
+        assertEquals(overworld, second.resourceLocation(player, Key.key("resource:overworld")))
+        assertEquals(end, second.resourceLocation(player, Key.key("resource:the.end")))
+        assertNull(second.resourceLocation(player, Key.key("resource:nether")))
+    }
+
+    @Test
+    fun `the latest resource location replaces the previous one`() {
+        val store = store(tempFile())
+        val player = UUID.randomUUID()
+        val key = Key.key("resource:overworld")
+        store.setResourceLocation(player, SavedLocation(key.asString(), 1.0, 2.0, 3.0, 0f, 0f))
+        val latest = SavedLocation(key.asString(), 4.0, 5.0, 6.0, 0f, 0f)
+        store.setResourceLocation(player, latest)
+        assertEquals(latest, store.resourceLocation(player, key))
+    }
+
+    @Test
+    fun `a reset forgets that world for every player and keeps other worlds`() {
+        val file = tempFile()
+        val alice = UUID.randomUUID()
+        val bob = UUID.randomUUID()
+        val overworld = Key.key("resource:overworld")
+        val nether = Key.key("resource:nether")
+        val first = store(file)
+        first.setResourceLocation(alice, SavedLocation(overworld.asString(), 1.0, 2.0, 3.0, 0f, 0f))
+        first.setResourceLocation(bob, SavedLocation(overworld.asString(), 4.0, 5.0, 6.0, 0f, 0f))
+        val kept = SavedLocation(nether.asString(), 7.0, 8.0, 9.0, 0f, 0f)
+        first.setResourceLocation(alice, kept)
+
+        first.clearResourceLocations(overworld)
+        first.saveNow()
+
+        val second = store(file)
+        second.load()
+        assertNull(second.resourceLocation(alice, overworld))
+        assertNull(second.resourceLocation(bob, overworld))
+        assertEquals(kept, second.resourceLocation(alice, nether))
+    }
+
+    @Test
+    fun `one player's location can be forgotten`() {
+        val store = store(tempFile())
+        val alice = UUID.randomUUID()
+        val bob = UUID.randomUUID()
+        val key = Key.key("resource:overworld")
+        val location = SavedLocation(key.asString(), 1.0, 2.0, 3.0, 0f, 0f)
+        store.setResourceLocation(alice, location)
+        store.setResourceLocation(bob, location)
+        store.clearResourceLocation(alice, key)
+        assertNull(store.resourceLocation(alice, key))
+        assertEquals(location, store.resourceLocation(bob, key))
+    }
+
+    @Test
     fun `missing file means no history`() {
         val store = store(tempFile())
         store.load()

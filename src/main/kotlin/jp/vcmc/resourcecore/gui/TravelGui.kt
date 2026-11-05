@@ -27,12 +27,23 @@ class TravelGui(private val plugin: ResourceCorePlugin) : Listener {
         plugin.tasks.entity(player) {
             val holder = Holder()
             holder.inv = Bukkit.createInventory(holder, SIZE, messages.text("travel-gui.title"))
-            render(holder.inv)
+            render(holder.inv, player)
             player.openInventory(holder.inv)
         }
     }
 
-    private fun render(inv: Inventory) {
+    /** ボタンを押すとどこへ行くかの表示。実際の移動先の決め方は SpawnService.teleportToResource と同じ。 */
+    private fun destination(player: Player, type: ResourceType): String {
+        val world = plugin.worlds.world(type)
+        val last = world?.takeIf { player.world != it }?.let { plugin.spawns.lastLocationIn(player.uniqueId, it) }
+            ?: return messages.raw("travel-gui.destination-spawn")
+        return messages.raw("travel-gui.destination-last")
+            .replace("<x>", last.blockX.toString())
+            .replace("<y>", last.blockY.toString())
+            .replace("<z>", last.blockZ.toString())
+    }
+
+    private fun render(inv: Inventory, player: Player) {
         val filler = item(Material.GRAY_STAINED_GLASS_PANE, Component.empty(), emptyList())
         for (slot in 0 until inv.size) inv.setItem(slot, filler)
         inv.setItem(
@@ -49,6 +60,7 @@ class TravelGui(private val plugin: ResourceCorePlugin) : Listener {
                         "travel-gui.world-lore",
                         "state" to plugin.stateLabel(type),
                         "players" to (plugin.worlds.world(type)?.playerCount ?: 0).toString(),
+                        "destination" to destination(player, type),
                     ),
                 ),
             )

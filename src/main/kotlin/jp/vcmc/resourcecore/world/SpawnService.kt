@@ -3,17 +3,20 @@ package jp.vcmc.resourcecore.world
 import jp.vcmc.resourcecore.ResourceCorePlugin
 import jp.vcmc.resourcecore.config.SavedLocation
 import jp.vcmc.resourcecore.logic.BlockKind
+import jp.vcmc.resourcecore.logic.FootingKind
 import jp.vcmc.resourcecore.logic.ResourceType
 import jp.vcmc.resourcecore.logic.SafeSpawn
 import jp.vcmc.resourcecore.logic.TargetState
 import net.kyori.adventure.key.Key
 import org.bukkit.Location
 import org.bukkit.Material
+import org.bukkit.Tag
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import kotlin.math.floor
 import kotlin.math.min
 
 /** スポーン地点の確保と、スポーンへのテレポートを受け持つ。 */
@@ -44,21 +47,58 @@ class SpawnService(private val plugin: ResourceCorePlugin) {
             plugin.messages.send(player, "main.not-in-resource")
             return
         }
-        tasks.teleport(player, returnLocation(player.uniqueId)).thenAccept { success ->
+        tasks.teleport(player, returnLocation(player.uniqueId), beforeTeleport = { rememberDeparture(player) }).thenAccept { success ->
             plugin.messages.send(player, if (success) "main.teleporting" else "resource.teleport-failed")
         }
     }
 
-    /** メインワールド側にいるなら、戻り先として現在地を記録する。所有リージョンから呼ぶこと。 */
-    private fun rememberLocation(player: Player) {
+    /**
+     * 前回そのワールドを離れた場所。次にそのワールドへ行くときの移動先になる。
+     * 記録が無いときと、ボーダーを縮めて範囲外になったときは null を返す（スポーンへ送る）。
+     */
+    fun lastLocationIn(player: UUID, world: World): Location? {
+        val saved = plugin.data.resourceLocation(player, world.key()) ?: return null
+        val location = Location(world, saved.x, saved.y, saved.z, saved.yaw, saved.pitch)
+        return location.takeIf { world.worldBorder.isInside(it) }
+    }
+
+    /**
+     * ワールドを離れる直前に現在地を記録する。所有リージョンから呼ぶこと。
+     * メインワールド側なら /main の戻り先に、資源ワールドなら次に来たときの移動先になる。
+     */
+    private fun rememberDeparture(player: Player) {
         val location = player.location
         val world = location.world ?: return
-        if (plugin.worlds.typeOf(world.key()) != null) return
-        plugin.data.setReturnLocation(
-            player.uniqueId,
-            SavedLocation(world.key().asString(), location.x, location.y, location.z, location.yaw, location.pitch),
-        )
+        val saved = SavedLocation(world.key().asString(), location.x, location.y, location.z, location.yaw, location.pitch)
+        val type = plugin.worlds.typeOf(world.key())
+        when {
+            type == null -> plugin.data.setReturnLocation(player.uniqueId, saved)
+            player.isFlying || isSafeToReturn(world, location) -> plugin.data.setResourceLocation(player.uniqueId, saved)
+            else -> {
+                // 溶岩の中や落下中に離れた人を、同じ場所へ戻して死なせない。
+                plugin.data.clearResourceLocation(player.uniqueId, world.key())
+                plugin.messages.send(player, "resource.location-not-saved", "world" to plugin.messages.worldName(type))
+            }
+        }
         plugin.data.saveAsync()
+    }
+
+    private fun isSafeToReturn(world: World, location: Location): Boolean {
+        val xs = listOf(floor(location.x - HALF_PLAYER_WIDTH).toInt(), floor(location.x + HALF_PLAYER_WIDTH).toInt()).distinct()
+        val zs = listOf(floor(location.z - HALF_PLAYER_WIDTH).toInt(), floor(location.z + HALF_PLAYER_WIDTH).toInt()).distinct()
+        val columns = xs.flatMap { x ->
+            zs.map { z -> { y: Int -> footing(world.getBlockAt(x, y, z)) } }
+        }
+        return SafeSpawn.isSafeToReturn(location.blockY, columns)
+    }
+
+    private fun footing(block: Block): FootingKind {
+        val material = block.type
+        return when {
+            material in DANGEROUS -> FootingKind.DANGER
+            material.isSolid || block.isLiquid || Tag.CLIMBABLE.isTagged(material) -> FootingKind.SUPPORT
+            else -> FootingKind.OPEN
+        }
     }
 
     fun spawnOf(world: World, type: ResourceType): Location =
@@ -102,15 +142,24 @@ class SpawnService(private val plugin: ResourceCorePlugin) {
             plugin.messages.send(player, "resource.unavailable", "world" to name)
             return
         }
-        val ready = if (type == ResourceType.END) ensureEndPlatform(world) else CompletableFuture.completedFuture(Unit)
+        // 同じワールドにいるときはスポーンへ送る。前回の場所が悪かったときの逃げ道にもなる。
+        val alreadyThere = player.world == world
+        val last = if (alreadyThere) null else lastLocationIn(player.uniqueId, world)
+        val ready = if (last == null && type == ResourceType.END) ensureEndPlatform(world) else CompletableFuture.completedFuture(Unit)
         ready.whenComplete { _, _ ->
             // 足場を作っている間にリセットが始まっていないか確認する。
             if (plugin.worlds.targetState(type) != TargetState.READY) {
                 plugin.messages.send(player, "resource.resetting", "world" to name)
                 return@whenComplete
             }
-            tasks.teleport(player, spawnOf(world, type), beforeTeleport = { rememberLocation(player) }).thenAccept { success ->
-                plugin.messages.send(player, if (success) "resource.teleporting" else "resource.teleport-failed", "world" to name)
+            val target = last ?: spawnOf(world, type)
+            tasks.teleport(player, target, beforeTeleport = { if (!alreadyThere) rememberDeparture(player) }).thenAccept { success ->
+                val path = when {
+                    !success -> "resource.teleport-failed"
+                    last != null -> "resource.teleporting-last"
+                    else -> "resource.teleporting"
+                }
+                plugin.messages.send(player, path, "world" to name)
             }
         }
     }
@@ -278,6 +327,7 @@ class SpawnService(private val plugin: ResourceCorePlugin) {
 
         private const val SEARCH_CHUNK_RADIUS = 4
         private const val NETHER_TOP = 120
+        private const val HALF_PLAYER_WIDTH = 0.3
 
         // バニラの ServerLevel.END_SPAWN_POINT と EndPlatformFeature に合わせた座標。
         private const val END_X = 100

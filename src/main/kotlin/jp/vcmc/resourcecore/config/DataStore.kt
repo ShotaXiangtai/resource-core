@@ -2,6 +2,7 @@ package jp.vcmc.resourcecore.config
 
 import jp.vcmc.resourcecore.util.writeAtomically
 import net.kyori.adventure.key.Key
+import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.configuration.file.YamlConfiguration
 import java.io.File
 import java.util.UUID
@@ -11,7 +12,7 @@ import java.util.logging.Logger
 /** 1.0.0 のハブがゲームルールを変更する前の値。元に戻すまで保持する。 */
 data class HubRuleRecord(val world: String, val originals: Map<String, Boolean>)
 
-/** 資源ワールドへ入る直前にいた場所。 */
+/** 記録しておく場所。資源ワールドへ入る直前の場所と、資源ワールドを離れる直前の場所に使う。 */
 data class SavedLocation(
     val world: String,
     val x: Double,
@@ -34,6 +35,9 @@ class DataStore(
     private val spawnPrepared = ConcurrentHashMap.newKeySet<String>()
     private val pregenPending = ConcurrentHashMap.newKeySet<String>()
     private val returnLocations = ConcurrentHashMap<UUID, SavedLocation>()
+
+    /** プレイヤーごとに、ワールドキー → そのワールドを離れる直前にいた場所。 */
+    private val resourceLocations = ConcurrentHashMap<UUID, ConcurrentHashMap<String, SavedLocation>>()
     private val writeLock = Any()
 
     @Volatile
@@ -54,7 +58,19 @@ class DataStore(
         spawnPrepared += yaml.getStringList("spawn-prepared")
         pregenPending += yaml.getStringList("pregen-pending")
         yaml.getConfigurationSection("return-locations")?.let { section ->
-            section.getKeys(false).forEach { id -> readLocation(section.getConfigurationSection(id), id) }
+            section.getKeys(false).forEach { id ->
+                val uuid = parseUuid(id) ?: return@forEach
+                parseLocation(section.getConfigurationSection(id))?.let { returnLocations[uuid] = it }
+            }
+        }
+        yaml.getConfigurationSection("resource-locations")?.let { players ->
+            players.getKeys(false).forEach { id ->
+                val uuid = parseUuid(id) ?: return@forEach
+                val worlds = players.getConfigurationSection(id) ?: return@forEach
+                worlds.getKeys(false).forEach { world ->
+                    parseLocation(worlds.getConfigurationSection(world))?.let { setResourceLocation(uuid, it) }
+                }
+            }
         }
         val hubWorld = yaml.getString("hub-rules|world")
         if (hubWorld != null) {
@@ -65,10 +81,11 @@ class DataStore(
         }
     }
 
-    private fun readLocation(section: org.bukkit.configuration.ConfigurationSection?, id: String) {
-        val uuid = runCatching { UUID.fromString(id) }.getOrNull() ?: return
-        val world = section?.getString("world") ?: return
-        returnLocations[uuid] = SavedLocation(
+    private fun parseUuid(id: String): UUID? = runCatching { UUID.fromString(id) }.getOrNull()
+
+    private fun parseLocation(section: ConfigurationSection?): SavedLocation? {
+        val world = section?.getString("world") ?: return null
+        return SavedLocation(
             world,
             section.getDouble("x"),
             section.getDouble("y"),
@@ -76,6 +93,15 @@ class DataStore(
             section.getDouble("yaw").toFloat(),
             section.getDouble("pitch").toFloat(),
         )
+    }
+
+    private fun writeLocation(yaml: YamlConfiguration, base: String, location: SavedLocation) {
+        yaml.set("$base|world", location.world)
+        yaml.set("$base|x", location.x)
+        yaml.set("$base|y", location.y)
+        yaml.set("$base|z", location.z)
+        yaml.set("$base|yaw", location.yaw.toDouble())
+        yaml.set("$base|pitch", location.pitch.toDouble())
     }
 
     fun lastReset(key: Key): Long? = lastResets[key.asString()]
@@ -102,27 +128,38 @@ class DataStore(
         returnLocations[player] = location
     }
 
+    fun resourceLocation(player: UUID, world: Key): SavedLocation? = resourceLocations[player]?.get(world.asString())
+
+    fun setResourceLocation(player: UUID, location: SavedLocation) {
+        resourceLocations.computeIfAbsent(player) { ConcurrentHashMap() }[location.world] = location
+    }
+
+    fun clearResourceLocation(player: UUID, world: Key) {
+        resourceLocations[player]?.remove(world.asString())
+    }
+
+    /** ワールドがリセットされたら、全員分のそのワールドの記録を捨てる。地形が変わっているので使えない。 */
+    fun clearResourceLocations(world: Key) {
+        resourceLocations.values.forEach { it.remove(world.asString()) }
+    }
+
     fun saveAsync() = runAsync { saveNow() }
 
     fun saveNow() {
-        val yaml = newYaml()
-        lastResets.forEach { (key, value) -> yaml.set("last-reset|$key", value) }
-        yaml.set("spawn-prepared", spawnPrepared.sorted())
-        yaml.set("pregen-pending", pregenPending.sorted())
-        returnLocations.forEach { (id, location) ->
-            val base = "return-locations|$id|"
-            yaml.set("${base}world", location.world)
-            yaml.set("${base}x", location.x)
-            yaml.set("${base}y", location.y)
-            yaml.set("${base}z", location.z)
-            yaml.set("${base}yaw", location.yaw.toDouble())
-            yaml.set("${base}pitch", location.pitch.toDouble())
-        }
-        legacyHubRules?.let { record ->
-            yaml.set("hub-rules|world", record.world)
-            record.originals.forEach { (rule, value) -> yaml.set("hub-rules|originals|$rule", value) }
-        }
+        // 保存が重なったときに古い内容で上書きしないよう、内容を作るところからロックする。
         synchronized(writeLock) {
+            val yaml = newYaml()
+            lastResets.forEach { (key, value) -> yaml.set("last-reset|$key", value) }
+            yaml.set("spawn-prepared", spawnPrepared.sorted())
+            yaml.set("pregen-pending", pregenPending.sorted())
+            returnLocations.forEach { (id, location) -> writeLocation(yaml, "return-locations|$id", location) }
+            resourceLocations.forEach { (id, worlds) ->
+                worlds.forEach { (world, location) -> writeLocation(yaml, "resource-locations|$id|$world", location) }
+            }
+            legacyHubRules?.let { record ->
+                yaml.set("hub-rules|world", record.world)
+                record.originals.forEach { (rule, value) -> yaml.set("hub-rules|originals|$rule", value) }
+            }
             try {
                 writeAtomically(file.toPath(), yaml.saveToString())
             } catch (e: Exception) {

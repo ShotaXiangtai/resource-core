@@ -106,6 +106,8 @@ class WorldService(private val plugin: ResourceCorePlugin) {
                 access.load(settings.key)
             } else {
                 plugin.logger.info("${settings.key.asString()} を作成します")
+                // 同じキーで作り直す場合、以前のワールドで記録した場所は使えない。
+                plugin.data.clearResourceLocations(settings.key)
                 val dimension = dimensionOf(type)
                 val level = Level.builder(settings.key)
                     .dimension(dimension)

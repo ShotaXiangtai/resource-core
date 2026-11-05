@@ -38,6 +38,8 @@ main:
 
 resource:
   teleporting: "<prefix><green><world>へ移動しました。"
+  teleporting-last: "<prefix><green><world>の前回いた場所へ移動しました。<gray>もう一度実行するとスポーンへ移動します。"
+  location-not-saved: "<prefix><yellow>危険な場所だったため、次に<world>へ行くときはスポーンへ移動します。"
   resetting: "<prefix><red><world>はリセット中です。"
   unavailable: "<prefix><red><world>は現在利用できません。"
   teleport-failed: "<prefix><red>移動に失敗しました。"
@@ -88,8 +90,11 @@ travel-gui:
     - "<gray>コマンド: <white>/main"
   world-name: "<aqua><world>へ移動"
   world-lore:
+    - "<gray>移動先: <white><destination>"
     - "<gray>状態: <state>"
     - "<gray>中にいる人数: <white><players>"
+  destination-last: "前回いた場所 (<x>, <y>, <z>)"
+  destination-spawn: "スポーン"
 
 gui:
   title: "<dark_aqua>resource-core 管理"
@@ -120,7 +125,8 @@ gui:
     - "<gray>クリックで切り替えます。"
   teleport-name: "<aqua><world>へ移動"
   teleport-lore:
-    - "<gray>クリックでスポーンへ移動します。"
+    - "<gray>クリックで前回いた場所へ移動します。"
+    - "<gray>記録が無いときや、同じワールドにいるときはスポーンへ移動します。"
   main-name: "<aqua>メインワールドへ戻る"
   main-lore:
     - "<gray>資源ワールドへ入る直前にいた場所へ戻ります。"

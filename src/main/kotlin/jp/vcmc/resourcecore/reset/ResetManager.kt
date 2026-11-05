@@ -14,10 +14,12 @@ import net.thenextlvl.worlds.WorldOperationException
 import net.thenextlvl.worlds.WorldsAccess
 import org.bukkit.World
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 enum class StartResult { STARTED_COUNTDOWN, STARTED_NOW, SKIPPED_TO_NOW, ALREADY_ACTIVE, WORLD_NOT_LOADED }
@@ -203,13 +205,19 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
     }
 
     private fun regenerate(session: Session, world: World, attempt: Int) {
-        val type = session.type
         val newSeed = if (session.changeSeed) ThreadLocalRandom.current().nextLong() else null
         val dragonData = world.worldPath.resolve(DRAGON_FIGHT_DATA)
 
         clearDragonBossBar(world)
-        clearRespawnPoints(session.key)
 
+        // ワールドをアンロードすると、そのワールドのリスポーン地点を判定できなくなる。先に解除を済ませる。
+        clearRespawnPoints(session.key).whenComplete { _, _ ->
+            tasks.global { startRegenerate(session, world, attempt, newSeed, dragonData) }
+        }
+    }
+
+    private fun startRegenerate(session: Session, world: World, attempt: Int, newSeed: Long?, dragonData: Path) {
+        val type = session.type
         val resetAt = System.currentTimeMillis()
         WorldsAccess.access().regenerate(world) { builder ->
             // このブロックはアンロード成功後、ファイル削除の直前に呼ばれる。
@@ -247,6 +255,7 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
         }
         plugin.data.setLastReset(session.key, resetAt)
         plugin.data.setSpawnPrepared(session.key, false)
+        plugin.data.clearResourceLocations(session.key)
         plugin.data.saveAsync()
         plugin.worlds.applyBorder(world, session.type)
 
@@ -274,19 +283,30 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
         }
     }
 
-    /** オンラインの人の、消えるワールドにあるリスポーン地点を解除する。オフラインの人はログイン時に処理する。 */
-    private fun clearRespawnPoints(key: Key) {
-        plugin.server.onlinePlayers.forEach { player ->
-            tasks.entity(player) {
-                // Canvas が非推奨にしているのは検証ありの呼び出し。false は保存値を読むだけで安全。
-                @Suppress("DEPRECATION")
-                val location = player.getRespawnLocation(false)
-                if (location?.world?.key() == key) {
-                    player.setRespawnLocation(null)
-                    messages.send(player, "login.respawn-cleared")
+    /**
+     * オンラインの人の、消えるワールドにあるリスポーン地点を解除する。オフラインの人はログイン時に処理する。
+     * 各プレイヤーのリージョンで実行するので、全員分が終わると完了する Future を返す。
+     */
+    private fun clearRespawnPoints(key: Key): CompletableFuture<Void> {
+        val futures = plugin.server.onlinePlayers.map { player ->
+            val done = CompletableFuture<Unit>()
+            tasks.entity(player, retired = { done.complete(Unit) }) {
+                try {
+                    // Canvas が非推奨にしているのは検証ありの呼び出し。false は保存値を読むだけで安全。
+                    @Suppress("DEPRECATION")
+                    val location = player.getRespawnLocation(false)
+                    if (location?.world?.key() == key) {
+                        player.setRespawnLocation(null)
+                        messages.send(player, "login.respawn-cleared")
+                    }
+                } finally {
+                    done.complete(Unit)
                 }
             }
+            // 応答しないリージョンがあってもリセットが止まらないようにする。
+            done.completeOnTimeout(Unit, RESPAWN_CLEAR_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         }
+        return CompletableFuture.allOf(*futures.toTypedArray())
     }
 
     private fun fail(session: Session, reason: String) {
@@ -301,6 +321,7 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
     private companion object {
         const val DRAGON_FIGHT_DATA = "data/minecraft/ender_dragon_fight.dat"
         const val KICK_GRACE_MILLIS = 10_000L
+        const val RESPAWN_CLEAR_TIMEOUT_SECONDS = 5L
         const val MAX_ATTEMPTS = 3
     }
 }

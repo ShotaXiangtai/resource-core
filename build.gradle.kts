@@ -4,9 +4,9 @@ plugins {
 }
 
 group = "jp.vcmc"
-version = "1.1.0"
+version = "1.2.0"
 
-val canvasApiVersion = "26.3.build.1001-stable"
+val canvasApiVersion = "26.3.build.1010-stable"
 val worldsVersion = "4.5.0"
 val chunkyVersion = "1.5.66"
 
