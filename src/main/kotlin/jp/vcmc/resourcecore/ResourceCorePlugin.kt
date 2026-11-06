@@ -3,6 +3,7 @@ package jp.vcmc.resourcecore
 import jp.vcmc.resourcecore.command.CommandRegistrar
 import jp.vcmc.resourcecore.config.ConfigIssue
 import jp.vcmc.resourcecore.config.DataStore
+import jp.vcmc.resourcecore.config.Localized
 import jp.vcmc.resourcecore.config.Messages
 import jp.vcmc.resourcecore.config.Settings
 import jp.vcmc.resourcecore.config.SettingsParser
@@ -158,17 +159,19 @@ class ResourceCorePlugin : JavaPlugin() {
         }
     }
 
-    fun stateLabel(type: ResourceType): String {
+    fun stateLabel(type: ResourceType): Localized {
         val remaining = resets.remainingSeconds(type)
         if (remaining != null) {
-            return messages.raw("state.countdown").replace("<time>", messages.duration(remaining))
+            val time = messages.duration(remaining)
+            return Localized { language -> messages.raw(language, "state.countdown").replace("<time>", time.resolve(language)) }
         }
-        return when (worlds.phase(type)) {
-            WorldPhase.MISSING -> messages.raw("state.missing")
-            WorldPhase.CREATING -> messages.raw("state.creating")
-            WorldPhase.READY -> messages.raw("state.ready")
-            WorldPhase.RESETTING -> messages.raw("state.resetting")
+        val path = when (worlds.phase(type)) {
+            WorldPhase.MISSING -> "state.missing"
+            WorldPhase.CREATING -> "state.creating"
+            WorldPhase.READY -> "state.ready"
+            WorldPhase.RESETTING -> "state.resetting"
         }
+        return Localized { messages.raw(it, path) }
     }
 
     private fun isCanvas(): Boolean = try {

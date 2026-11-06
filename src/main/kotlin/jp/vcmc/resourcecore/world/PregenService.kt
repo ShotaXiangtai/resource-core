@@ -1,6 +1,7 @@
 package jp.vcmc.resourcecore.world
 
 import jp.vcmc.resourcecore.ResourceCorePlugin
+import jp.vcmc.resourcecore.config.Localized
 import jp.vcmc.resourcecore.logic.ResourceType
 import jp.vcmc.resourcecore.logic.borderRadius
 import net.kyori.adventure.key.Key
@@ -126,16 +127,18 @@ class PregenService(private val plugin: ResourceCorePlugin) {
     }
 
     /** status と GUI に出す文字列。 */
-    fun label(key: Key): String {
+    fun label(key: Key): Localized {
         val id = key.asString()
         val messages = plugin.messages
         val running = (api as? ChunkyAPI)?.isRunning(id) == true
         return when {
-            !isAvailable -> messages.raw("pregen.no-chunky")
-            running -> messages.raw("pregen.running")
-                .replace("<percent>", String.format(Locale.ROOT, "%.1f", progress[id] ?: 0f))
-            plugin.data.isPregenPending(key) -> messages.raw("pregen.waiting")
-            else -> messages.raw("pregen.idle")
+            !isAvailable -> Localized { messages.raw(it, "pregen.no-chunky") }
+            running -> {
+                val percent = String.format(Locale.ROOT, "%.1f", progress[id] ?: 0f)
+                Localized { messages.raw(it, "pregen.running").replace("<percent>", percent) }
+            }
+            plugin.data.isPregenPending(key) -> Localized { messages.raw(it, "pregen.waiting") }
+            else -> Localized { messages.raw(it, "pregen.idle") }
         }
     }
 
