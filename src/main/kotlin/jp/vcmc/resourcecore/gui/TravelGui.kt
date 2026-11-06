@@ -83,13 +83,19 @@ class TravelGui(private val plugin: ResourceCorePlugin) : Listener {
         val player = event.whoClicked as? Player ?: return
         if (event.clickedInventory != top) return
         if (event.slot == SLOT_MAIN) {
-            player.closeInventory()
-            if (player.hasPermission(PERM_MAIN)) plugin.spawns.teleportToMain(player)
+            closeThen(player) { if (player.hasPermission(PERM_MAIN)) plugin.spawns.teleportToMain(player) }
             return
         }
         val type = ResourceType.entries.firstOrNull { slotOf(it) == event.slot } ?: return
-        player.closeInventory()
-        if (player.hasPermission(PERM_RESOURCE)) plugin.spawns.teleportToResource(player, type)
+        closeThen(player) { if (player.hasPermission(PERM_RESOURCE)) plugin.spawns.teleportToResource(player, type) }
+    }
+
+    /** InventoryClickEvent の処理中にインベントリを閉じてはいけないので、次の tick へ送る。 */
+    private fun closeThen(player: Player, block: () -> Unit) {
+        plugin.tasks.entity(player) {
+            player.closeInventory()
+            block()
+        }
     }
 
     @EventHandler

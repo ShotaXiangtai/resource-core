@@ -107,7 +107,7 @@ gui:
     - "<gray>中にいる人数: <white><players>"
     - "<gray>事前生成: <pregen>"
     - "<gray>前回リセット: <white><last_reset>"
-  reset-name: "<red>即時リセット"
+  reset-name: "<red>リセット"
   reset-lore:
     - "<gray>確認画面を開きます。"
     - "<gray>確定すると告知カウントダウン後にリセットします。"
