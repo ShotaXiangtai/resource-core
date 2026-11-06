@@ -24,7 +24,7 @@ Canvas の `EntityPortalAsyncEvent` はある場合だけ使うので、Folia �
 
 ## 導入手順
 
-1. `plugins/` に `worlds-4.5.0-all.jar`、`Chunky-Paper-1.5.66.jar`、`resource-core-1.2.0.jar` を入れます。
+1. `plugins/` に `worlds-4.5.0-all.jar`、`Chunky-Paper-1.5.66.jar`、`resource-core-1.2.1.jar` を入れます。
 2. サーバーを起動します。`resource:overworld` / `resource:nether` / `resource:the_end` が自動で作成され、事前生成が始まります。
 
 追加のワールドは `world/dimensions/<namespace>/<key>/` に作られます。デフォルトワールド（`minecraft:overworld` など）には触りません。
@@ -238,4 +238,4 @@ Java 25 が必要です。
 ./gradlew build
 ```
 
-`build/libs/resource-core-1.2.0.jar` が生成されます（Kotlin 標準ライブラリを同梱）。
+`build/libs/resource-core-1.2.1.jar` が生成されます（Kotlin 標準ライブラリを同梱）。

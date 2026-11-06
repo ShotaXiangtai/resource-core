@@ -41,6 +41,10 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
 
         @Volatile
         var skipCountdown = false
+
+        /** リセットの開始時に事前生成が途中だったか。リセットに失敗したら再開する。 */
+        @Volatile
+        var pregenWasPending = false
     }
 
     private val sessions = ConcurrentHashMap<ResourceType, Session>()
@@ -135,6 +139,7 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
         messages.broadcast(plugin.server, messages.text("reset.started", "world" to messages.worldName(session.type)))
         plugin.logger.info("${session.key.asString()} のリセットを開始します")
         // 事前生成が動いたままだとアンロードと競合するので、先に止める。
+        session.pregenWasPending = plugin.data.isPregenPending(session.key)
         plugin.pregen.cancel(session.key).whenComplete { _, _ ->
             tasks.global { moveOut(session, world, attempt = 1) }
         }
@@ -316,6 +321,12 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
         sessions.remove(session.type, session)
         val component: Component = messages.text("reset.failed", "world" to messages.worldName(session.type))
         messages.broadcast(plugin.server, component)
+        // ワールドは残っているので、止めた事前生成を再開する。止めたままにすると次のリセットまで生成されない。
+        if (session.pregenWasPending && phase == WorldPhase.READY) {
+            plugin.data.setPregenPending(session.key, true)
+            plugin.data.saveAsync()
+            plugin.pregen.resumePending()
+        }
     }
 
     private companion object {

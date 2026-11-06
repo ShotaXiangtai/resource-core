@@ -203,7 +203,7 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
         val player = event.whoClicked as? Player ?: return
         if (event.clickedInventory != top) return
         if (!player.hasPermission(PERM_GUI)) {
-            player.closeInventory()
+            closeThen(player) {}
             return
         }
         when (val screen = holder.screen) {
@@ -230,12 +230,11 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
     private fun onMainClick(player: Player, slot: Int) {
         when (slot) {
             SLOT_MAIN -> {
-                player.closeInventory()
-                plugin.spawns.teleportToMain(player)
+                closeThen(player) { plugin.spawns.teleportToMain(player) }
                 return
             }
             SLOT_CLOSE -> {
-                player.closeInventory()
+                closeThen(player) {}
                 return
             }
         }
@@ -243,11 +242,16 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
             when (slot) {
                 actionSlot(type) -> onActionClick(player, type)
                 seedSlot(type) -> toggleSeed(player, type)
-                teleportSlot(type) -> {
-                    player.closeInventory()
-                    plugin.spawns.teleportToResource(player, type)
-                }
+                teleportSlot(type) -> closeThen(player) { plugin.spawns.teleportToResource(player, type) }
             }
+        }
+    }
+
+    /** InventoryClickEvent の処理中にインベントリを閉じてはいけないので、次の tick へ送る。 */
+    private fun closeThen(player: Player, block: () -> Unit) {
+        plugin.tasks.entity(player) {
+            player.closeInventory()
+            block()
         }
     }
 
