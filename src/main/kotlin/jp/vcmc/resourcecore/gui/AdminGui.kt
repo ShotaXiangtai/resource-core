@@ -2,6 +2,7 @@ package jp.vcmc.resourcecore.gui
 
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask
 import jp.vcmc.resourcecore.ResourceCorePlugin
+import jp.vcmc.resourcecore.config.Localized
 import jp.vcmc.resourcecore.logic.ResourceType
 import jp.vcmc.resourcecore.reset.CancelResult
 import jp.vcmc.resourcecore.reset.StartResult
@@ -46,8 +47,8 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
         plugin.tasks.entity(player) {
             val holder = Holder(screen)
             val (size, title) = when (screen) {
-                Screen.Main -> MAIN_SIZE to messages.text("gui.title")
-                is Screen.Confirm -> CONFIRM_SIZE to messages.text("gui.confirm-title")
+                Screen.Main -> MAIN_SIZE to messages.text(player, "gui.title")
+                is Screen.Confirm -> CONFIRM_SIZE to messages.text(player, "gui.confirm-title")
             }
             holder.inv = Bukkit.createInventory(holder, size, title)
             render(holder, player)
@@ -81,7 +82,7 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
     private fun render(holder: Holder, player: Player) {
         when (val screen = holder.screen) {
             Screen.Main -> renderMain(holder.inv, player)
-            is Screen.Confirm -> renderConfirm(holder.inv, screen.type)
+            is Screen.Confirm -> renderConfirm(holder.inv, player, screen.type)
         }
     }
 
@@ -98,8 +99,9 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
                 statusSlot(type),
                 item(
                     ICONS.getValue(type),
-                    messages.itemText("gui.status-name", "world" to name),
+                    messages.itemText(player, "gui.status-name", "world" to name),
                     messages.itemLore(
+                        player,
                         "gui.status-lore",
                         "key" to settings.world(type).key.asString(),
                         "state" to state,
@@ -110,55 +112,55 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
                     ),
                 ),
             )
-            inv.setItem(actionSlot(type), actionItem(type, state))
+            inv.setItem(actionSlot(type), actionItem(player, type, state))
             val changeSeed = settings.world(type).changeSeed
             inv.setItem(
                 seedSlot(type),
                 item(
                     if (changeSeed) Material.LIME_DYE else Material.GRAY_DYE,
-                    messages.itemText("gui.seed-name", "value" to messages.yesNo(changeSeed)),
-                    messages.itemLore("gui.seed-lore"),
+                    messages.itemText(player, "gui.seed-name", "value" to messages.yesNo(changeSeed)),
+                    messages.itemLore(player, "gui.seed-lore"),
                 ),
             )
             inv.setItem(
                 teleportSlot(type),
                 item(
                     Material.ENDER_PEARL,
-                    messages.itemText("gui.teleport-name", "world" to name),
-                    messages.itemLore("gui.teleport-lore"),
+                    messages.itemText(player, "gui.teleport-name", "world" to name),
+                    messages.itemLore(player, "gui.teleport-lore"),
                 ),
             )
         }
         inv.setItem(
             SLOT_MAIN,
-            item(Material.COMPASS, messages.itemText("gui.main-name"), messages.itemLore("gui.main-lore")),
+            item(Material.COMPASS, messages.itemText(player, "gui.main-name"), messages.itemLore(player, "gui.main-lore")),
         )
-        inv.setItem(SLOT_CLOSE, item(Material.BARRIER, messages.itemText("gui.close-name"), emptyList()))
+        inv.setItem(SLOT_CLOSE, item(Material.BARRIER, messages.itemText(player, "gui.close-name"), emptyList()))
     }
 
-    private fun actionItem(type: ResourceType, state: String): ItemStack {
+    private fun actionItem(player: Player, type: ResourceType, state: Localized): ItemStack {
         val remaining = plugin.resets.remainingSeconds(type)
         return when {
             remaining != null -> item(
                 Material.RED_CONCRETE,
-                messages.itemText("gui.cancel-name"),
-                messages.itemLore("gui.cancel-lore", "time" to messages.duration(remaining)),
+                messages.itemText(player, "gui.cancel-name"),
+                messages.itemLore(player, "gui.cancel-lore", "time" to messages.duration(remaining)),
             )
             plugin.worlds.phase(type) == WorldPhase.RESETTING || plugin.worlds.phase(type) == WorldPhase.CREATING -> item(
                 Material.CLOCK,
-                messages.itemText("gui.busy-name"),
-                messages.itemLore("gui.busy-lore", "state" to state),
+                messages.itemText(player, "gui.busy-name"),
+                messages.itemLore(player, "gui.busy-lore", "state" to state),
             )
             plugin.worlds.world(type) == null -> item(
                 Material.LIME_CONCRETE,
-                messages.itemText("gui.create-name"),
-                messages.itemLore("gui.create-lore"),
+                messages.itemText(player, "gui.create-name"),
+                messages.itemLore(player, "gui.create-lore"),
             )
-            else -> item(Material.TNT, messages.itemText("gui.reset-name"), messages.itemLore("gui.reset-lore"))
+            else -> item(Material.TNT, messages.itemText(player, "gui.reset-name"), messages.itemLore(player, "gui.reset-lore"))
         }
     }
 
-    private fun renderConfirm(inv: Inventory, type: ResourceType) {
+    private fun renderConfirm(inv: Inventory, player: Player, type: ResourceType) {
         val filler = item(Material.GRAY_STAINED_GLASS_PANE, Component.empty(), emptyList())
         for (slot in 0 until inv.size) inv.setItem(slot, filler)
         val name = messages.worldName(type)
@@ -167,8 +169,9 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
             SLOT_CONFIRM,
             item(
                 Material.RED_WOOL,
-                messages.itemText("gui.confirm-name"),
+                messages.itemText(player, "gui.confirm-name"),
                 messages.itemLore(
+                    player,
                     "gui.confirm-lore",
                     "world" to name,
                     "time" to messages.duration(duration),
@@ -180,11 +183,11 @@ class AdminGui(private val plugin: ResourceCorePlugin) : Listener {
             SLOT_CONFIRM_INFO,
             item(
                 Material.PAPER,
-                messages.itemText("gui.confirm-info-name", "world" to name),
-                messages.itemLore("gui.confirm-info-lore"),
+                messages.itemText(player, "gui.confirm-info-name", "world" to name),
+                messages.itemLore(player, "gui.confirm-info-lore"),
             ),
         )
-        inv.setItem(SLOT_BACK, item(Material.LIME_WOOL, messages.itemText("gui.back-name"), emptyList()))
+        inv.setItem(SLOT_BACK, item(Material.LIME_WOOL, messages.itemText(player, "gui.back-name"), emptyList()))
     }
 
     private fun item(material: Material, name: Component, lore: List<Component>): ItemStack =

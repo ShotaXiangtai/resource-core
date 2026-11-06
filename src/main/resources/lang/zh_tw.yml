@@ -1,0 +1,144 @@
+# resource-core：繁體中文（台灣），MiniMessage 格式
+# 所有訊息都可以使用 <prefix>。留空則不傳送該訊息。
+prefix: "<gray>[<aqua>資源</aqua>]</gray> "
+
+world-name:
+  overworld: "資源主世界"
+  nether: "資源地獄"
+  end: "資源終界"
+
+time:
+  hour: "小時"
+  minute: "分鐘"
+  second: "秒"
+  separator: ""
+  never: "無"
+
+state:
+  missing: "<red>未建立"
+  creating: "<yellow>建立中"
+  ready: "<green>運作中"
+  countdown: "<gold>重置預告中（剩餘 <time>）"
+  resetting: "<red>重置中"
+
+pregen:
+  running: "<yellow>生成中 <percent>%"
+  waiting: "<yellow>等待繼續"
+  idle: "<gray>無"
+  no-chunky: "<red>未安裝 Chunky"
+
+common:
+  no-permission: "<prefix><red>你沒有權限。"
+  player-only: "<prefix><red>此指令僅限玩家執行。"
+  label-yes: "<green>是"
+  label-no: "<red>否"
+
+main:
+  teleporting: "<prefix><green>已返回主要世界。"
+  not-in-resource: "<prefix><yellow>只能在資源世界中使用。"
+
+resource:
+  teleporting: "<prefix><green>已移動到<world>。"
+  teleporting-last: "<prefix><green>已移動到<world>中你上次所在的位置。<gray>再次執行可移動到世界重生點。"
+  location-not-saved: "<prefix><yellow>該位置很危險，因此下次前往<world>時將移動到世界重生點。"
+  resetting: "<prefix><red><world>正在重置。"
+  unavailable: "<prefix><red><world>目前無法使用。"
+  teleport-failed: "<prefix><red>移動失敗。"
+  portal-resetting: "<prefix><red>目的地<world>正在重置。"
+  portal-unavailable: "<prefix><red>目的地<world>目前無法使用。"
+
+login:
+  relocated: "<prefix><yellow>你所在的世界已被重置，因此已將你移動。"
+  respawn-cleared: "<prefix><yellow>已清除位於被重置世界中的重生點。"
+
+reset:
+  countdown: "<prefix><gold><world>將在 <yellow><time></yellow> 後重置。"
+  cancelled: "<prefix><green><world>的重置已取消。"
+  started: "<prefix><red>開始重置<world>。"
+  moved: "<prefix><yellow>由於<world>正在重置，已將你移動到主要世界。"
+  kicked: "<red>由於<world>正在重置，你已中斷連線。可以重新連線。"
+  finished: "<prefix><green><world>重置完成。"
+  failed: "<prefix><red><world>重置失敗。請查看主控台。"
+  accepted-countdown: "<prefix><green>已預告<world>的重置（<time>後）。"
+  accepted-now: "<prefix><green>立即重置<world>。"
+  skipped-to-now: "<prefix><green>略過<world>的倒數並立即重置。"
+  already-active: "<prefix><yellow><world>已在重置中。"
+  world-not-loaded: "<prefix><red><world>尚未建立。"
+  cancel-ok: "<prefix><green>已取消<world>的倒數。"
+  cancel-none: "<prefix><yellow><world>沒有進行中的倒數。"
+  cancel-too-late: "<prefix><red><world>已在重置中，無法取消。"
+
+create:
+  started: "<prefix><yellow>正在建立<world>…"
+  finished: "<prefix><green>已建立<world>。"
+  failed: "<prefix><red><world>建立失敗。請查看主控台。"
+  already-exists: "<prefix><yellow><world>已存在。"
+
+admin:
+  reload-ok: "<prefix><green>已重新載入設定。"
+  reload-issues: "<prefix><yellow>已重新載入設定（<count> 個問題。請查看主控台）。"
+  reload-busy: "<prefix><red>重置過程中無法重新載入。"
+  seed-toggled: "<prefix><green><world>更換種子碼的設定已改為 <value><green>。"
+  status-header: "<prefix><aqua>── resource-core 狀態 ──"
+  status-world: "<gray><world> <dark_gray>(<key>)</dark_gray>：<state>"
+  status-world-detail: "<gray>  已載入：<loaded> <gray>/ 人數：<white><players></white> / 世界重生點：<white><spawn></white> / 邊界半徑：<white><border></white> / 預先生成：<pregen> <gray>/ 上次重置：<white><last_reset></white> / 更換種子碼：<change_seed>"
+
+travel-gui:
+  title: "<dark_aqua>世界移動"
+  main-name: "<green>返回主要世界"
+  main-lore:
+    - "<gray>返回進入資源世界前所在的位置。"
+    - "<gray>指令：<white>/main"
+  world-name: "<aqua>前往<world>"
+  world-lore:
+    - "<gray>目的地：<white><destination>"
+    - "<gray>狀態：<state>"
+    - "<gray>目前人數：<white><players>"
+  destination-last: "上次所在位置 (<x>, <y>, <z>)"
+  destination-spawn: "世界重生點"
+
+gui:
+  title: "<dark_aqua>resource-core 管理"
+  confirm-title: "<dark_red>確認重置"
+  status-name: "<aqua><world>"
+  status-lore:
+    - "<gray>鍵名：<white><key>"
+    - "<gray>狀態：<state>"
+    - "<gray>已載入：<loaded>"
+    - "<gray>目前人數：<white><players>"
+    - "<gray>預先生成：<pregen>"
+    - "<gray>上次重置：<white><last_reset>"
+  reset-name: "<red>重置"
+  reset-lore:
+    - "<gray>開啟確認畫面。"
+    - "<gray>確定後將在預告倒數結束時重置。"
+  cancel-name: "<yellow>取消倒數"
+  cancel-lore:
+    - "<gray>剩餘 <white><time>"
+  create-name: "<green>建立世界"
+  create-lore:
+    - "<gray>點擊建立。"
+  busy-name: "<gray>處理中"
+  busy-lore:
+    - "<gray>狀態：<state>"
+  seed-name: "<yellow>重置時更換種子碼：<value>"
+  seed-lore:
+    - "<gray>點擊切換。"
+  teleport-name: "<aqua>前往<world>"
+  teleport-lore:
+    - "<gray>點擊移動到上次所在的位置。"
+    - "<gray>沒有紀錄或已在該世界時，移動到世界重生點。"
+  main-name: "<aqua>返回主要世界"
+  main-lore:
+    - "<gray>返回進入資源世界前所在的位置。"
+  close-name: "<gray>關閉"
+  confirm-name: "<red>確定"
+  confirm-lore:
+    - "<gray>開始重置<world>。"
+    - "<gray>倒數：<white><time>"
+    - "<gray>更換種子碼：<value>"
+  confirm-info-name: "<gold>要重置<world>嗎？"
+  confirm-info-lore:
+    - "<gray>世界中的玩家將被移動到主要世界。"
+    - "<gray>世界內的建築和物品將全部遺失。"
+  back-name: "<green>返回"

@@ -1,4 +1,6 @@
-# resource-core メッセージ（MiniMessage 形式）
+# resource-core メッセージ（日本語、MiniMessage 形式）
+# ほかの言語の文面は lang フォルダにあります。en.yml: English、zh_cn.yml: 简体中文、zh_tw.yml: 繁體中文（台灣）、zh_hk.yml: 繁體中文（香港）
+# プレイヤーのクライアントの言語設定に合わせて自動で切り替わります。
 # <prefix> はどのメッセージでも使えます。空文字にするとそのメッセージは送信されません。
 prefix: "<gray>[<aqua>資源</aqua>]</gray> "
 
@@ -11,6 +13,8 @@ time:
   hour: "時間"
   minute: "分"
   second: "秒"
+  # 単位の間に入れる文字（英語の "1h 5m" の空白など）
+  separator: ""
   never: "なし"
 
 state:

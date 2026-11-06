@@ -24,7 +24,7 @@ Canvas の `EntityPortalAsyncEvent` はある場合だけ使うので、Folia �
 
 ## 導入手順
 
-1. `plugins/` に `worlds-4.5.0-all.jar`、`Chunky-Paper-1.5.66.jar`、`resource-core-1.2.1.jar` を入れます。
+1. `plugins/` に `worlds-4.5.0-all.jar`、`Chunky-Paper-1.5.66.jar`、`resource-core-1.3.0.jar` を入れます。
 2. サーバーを起動します。`resource:overworld` / `resource:nether` / `resource:the_end` が自動で作成され、事前生成が始まります。
 
 追加のワールドは `world/dimensions/<namespace>/<key>/` に作られます。デフォルトワールド（`minecraft:overworld` など）には触りません。
@@ -51,7 +51,7 @@ jar を入れ替えるだけで動きます。ハブは廃止しました。
 | `/resource-core cancel <ワールド>` | カウントダウンを中止 | `resourcecore.admin.cancel` | OP |
 | `/resource-core create <ワールド>` | 未作成のワールドを作成 | `resourcecore.admin.create` | OP |
 | `/resource-core status` | 状態を表示 | `resourcecore.admin.status` | OP |
-| `/resource-core reload` | 設定を再読み込み | `resourcecore.admin.reload` | OP |
+| `/resource-core reload` | `config.yml`、`messages.yml`、`lang` フォルダを再読み込み | `resourcecore.admin.reload` | OP |
 | `/resource-core admin` | 管理 GUI を開く | `resourcecore.admin.gui` | OP |
 
 `resourcecore.admin` は上記の管理権限すべてを含みます（既定: OP）。
@@ -148,7 +148,26 @@ Worlds は **同じ namespace のワールド同士** を Environment でポー�
 - その namespace に、他のワールドを置かないでください。
 - 実際の連携先が想定と違うとエラーログを出し、その経路のポータルを無効にします。
 
-メッセージはすべて `messages.yml`（MiniMessage 形式）で変更できます。空文字にすると送信しません。
+日本語のメッセージはすべて `messages.yml`（MiniMessage 形式）で変更できます。空文字にすると送信しません。ほかの言語は「多言語対応」を参照してください。
+
+## 多言語対応
+
+プレイヤーのクライアントの言語設定に合わせて、メッセージを自動で切り替えます。ゲーム中に言語を変更すると、次のメッセージから反映されます。
+
+| クライアントの言語 | 表示する言語 | 文面の場所 |
+|---|---|---|
+| 日本語 | 日本語 | `messages.yml` |
+| English（各地域） | English | `lang/en.yml` |
+| 简体中文 | 简体中文 | `lang/zh_cn.yml` |
+| 繁體中文（台灣）、文言 | 繁體中文（台灣） | `lang/zh_tw.yml` |
+| 繁體中文（香港） | 繁體中文（香港） | `lang/zh_hk.yml` |
+| 上記以外 | English | `lang/en.yml` |
+
+繁體中文（香港）の文面は広東語で書いています。コンソールへのメッセージとログは日本語のままです。
+
+`lang` フォルダのファイルは初回起動時に作られます。編集して `/resource-core reload` を実行すると反映されます。ファイルに無いキーは jar 内の既定の文面を使います。
+
+`config.yml` の `reset.countdown` に書いた `message` は全員に同じ文面で送ります。`<world>` と `<time>` だけが受け取る人の言語になります。
 
 ## ポータルの動作
 
@@ -170,7 +189,7 @@ Canvas では実際にワールドを移動する直前の `EntityPortalAsyncEve
 ./gradlew test
 ```
 
-カウントダウン、ログイン判定、ポータルの判定、スポーン探索、ボーダーの半径、設定の検証、data.yml の保存と読み込みを確認します。
+カウントダウン、ログイン判定、ポータルの判定、スポーン探索、ボーダーの半径、設定の検証、data.yml の保存と読み込みを確認します。翻訳ファイルについては、どの言語にも日本語と同じキーとプレースホルダーがあることを確認します。
 
 ### 確認済みの項目
 
@@ -221,6 +240,7 @@ GUI と権限:
 - [ ] 実際の戦闘でのドラゴン討伐（検証は `/kill` です）。エンダーパールのゲートウェイへの投げ込み（Folia の [Issue #51](https://github.com/PaperMC/Folia/issues/51) が未解決）
 - [ ] 本物のベッドとリスポーンアンカーでのリスポーン（検証は `/spawnpoint` です）
 - [ ] 乗り物に乗った状態での `/main` と `/resource`
+- [ ] 1.3.0 の多言語対応。クライアントの言語を変えると、メッセージ、GUI、ワールド名が切り替わる
 
 ## 既知の制限
 
@@ -238,4 +258,4 @@ Java 25 が必要です。
 ./gradlew build
 ```
 
-`build/libs/resource-core-1.2.1.jar` が生成されます（Kotlin 標準ライブラリを同梱）。
+`build/libs/resource-core-1.3.0.jar` が生成されます（Kotlin 標準ライブラリを同梱）。

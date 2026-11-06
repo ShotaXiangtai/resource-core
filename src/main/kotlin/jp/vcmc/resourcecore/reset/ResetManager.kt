@@ -8,7 +8,6 @@ import jp.vcmc.resourcecore.logic.ResourceType
 import jp.vcmc.resourcecore.world.WorldPhase
 import jp.vcmc.resourcecore.world.rootMessage
 import net.kyori.adventure.key.Key
-import net.kyori.adventure.text.Component
 import net.thenextlvl.worlds.Backup
 import net.thenextlvl.worlds.WorldOperationException
 import net.thenextlvl.worlds.WorldsAccess
@@ -97,7 +96,7 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
         if (!session.stage.compareAndSet(Stage.COUNTING, Stage.CANCELLED)) return CancelResult.TOO_LATE
         session.timer?.cancel()
         sessions.remove(type, session)
-        messages.broadcast(plugin.server, messages.text("reset.cancelled", "world" to messages.worldName(type)))
+        messages.broadcast(plugin.server, "reset.cancelled", "world" to messages.worldName(type))
         return CancelResult.CANCELLED
     }
 
@@ -122,8 +121,13 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
 
     private fun announce(type: ResourceType, step: CountdownStep, remaining: Int) {
         val args = arrayOf("world" to messages.worldName(type), "time" to messages.duration(remaining))
-        val component = step.message?.let { messages.parse(it, *args) } ?: messages.text("reset.countdown", *args)
-        messages.broadcast(plugin.server, component)
+        // config.yml の message は 1 つしか書けないので、全員に同じ文面を送る。
+        val template = step.message
+        if (template != null) {
+            messages.broadcastTemplate(plugin.server, template, *args)
+        } else {
+            messages.broadcast(plugin.server, "reset.countdown", *args)
+        }
     }
 
     private fun execute(session: Session) {
@@ -136,7 +140,7 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
         }
         // ここから /resource とポータルでの移動をブロックする。
         plugin.worlds.setPhase(session.type, WorldPhase.RESETTING)
-        messages.broadcast(plugin.server, messages.text("reset.started", "world" to messages.worldName(session.type)))
+        messages.broadcast(plugin.server, "reset.started", "world" to messages.worldName(session.type))
         plugin.logger.info("${session.key.asString()} のリセットを開始します")
         // 事前生成が動いたままだとアンロードと競合するので、先に止める。
         session.pregenWasPending = plugin.data.isPregenPending(session.key)
@@ -173,7 +177,7 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
                     kicked = true
                     plugin.logger.warning("${session.key.asString()} から移動できなかったプレイヤーをキックします: ${players.joinToString { it.name }}")
                     players.forEach { player ->
-                        tasks.entity(player) { player.kick(messages.text("reset.kicked", "world" to name)) }
+                        tasks.entity(player) { player.kick(messages.text(player, "reset.kicked", "world" to name)) }
                     }
                 }
                 else -> players.forEach { player ->
@@ -272,7 +276,7 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
                 plugin.worlds.validateRoutes()
                 sessions.remove(session.type, session)
                 plugin.logger.info("${session.key.asString()} のリセットが完了しました (seed: ${world.seed})")
-                messages.broadcast(plugin.server, messages.text("reset.finished", "world" to messages.worldName(session.type)))
+                messages.broadcast(plugin.server, "reset.finished", "world" to messages.worldName(session.type))
                 // 移動のブロックを解除してから裏で生成する。生成の完了は待たない。
                 plugin.pregen.start(world, session.type)
             }
@@ -319,8 +323,7 @@ class ResetManager(private val plugin: ResourceCorePlugin) {
         val phase = if (plugin.server.getWorld(session.key) != null) WorldPhase.READY else WorldPhase.MISSING
         plugin.worlds.setPhase(session.type, phase)
         sessions.remove(session.type, session)
-        val component: Component = messages.text("reset.failed", "world" to messages.worldName(session.type))
-        messages.broadcast(plugin.server, component)
+        messages.broadcast(plugin.server, "reset.failed", "world" to messages.worldName(session.type))
         // ワールドは残っているので、止めた事前生成を再開する。止めたままにすると次のリセットまで生成されない。
         if (session.pregenWasPending && phase == WorldPhase.READY) {
             plugin.data.setPregenPending(session.key, true)

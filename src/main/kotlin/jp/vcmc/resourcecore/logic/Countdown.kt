@@ -37,14 +37,15 @@ class CountdownTracker(steps: List<CountdownStep>, private val startedAtMillis: 
 }
 
 /** 秒数を「1分30秒」のような表記にする。単位の文字列は messages.yml で変更できる。 */
-fun formatDuration(totalSeconds: Int, hourUnit: String, minuteUnit: String, secondUnit: String): String {
+fun formatDuration(totalSeconds: Int, hourUnit: String, minuteUnit: String, secondUnit: String, separator: String = ""): String {
     val seconds = totalSeconds.coerceAtLeast(0)
     val h = seconds / 3600
     val m = seconds % 3600 / 60
     val s = seconds % 60
-    return buildString {
-        if (h > 0) append(h).append(hourUnit)
-        if (m > 0) append(m).append(minuteUnit)
-        if (s > 0 || isEmpty()) append(s).append(secondUnit)
+    val parts = buildList {
+        if (h > 0) add("$h$hourUnit")
+        if (m > 0) add("$m$minuteUnit")
+        if (s > 0 || isEmpty()) add("$s$secondUnit")
     }
+    return parts.joinToString(separator)
 }

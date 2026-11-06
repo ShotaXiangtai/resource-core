@@ -1,0 +1,148 @@
+# resource-core: English (MiniMessage)
+# <prefix> can be used in any message. Leave a message empty to not send it.
+prefix: "<gray>[<aqua>Resource</aqua>]</gray> "
+
+world-name:
+  overworld: "Resource Overworld"
+  nether: "Resource Nether"
+  end: "Resource End"
+
+time:
+  hour: "h"
+  minute: "m"
+  second: "s"
+  separator: " "
+  never: "Never"
+
+state:
+  missing: "<red>Not created"
+  creating: "<yellow>Creating"
+  ready: "<green>Running"
+  countdown: "<gold>Reset scheduled (<time> left)"
+  resetting: "<red>Resetting"
+
+pregen:
+  running: "<yellow>Generating <percent>%"
+  waiting: "<yellow>Waiting to resume"
+  idle: "<gray>None"
+  no-chunky: "<red>Chunky not installed"
+
+common:
+  no-permission: "<prefix><red>You do not have permission."
+  player-only: "<prefix><red>Only players can run this command."
+  label-yes: "<green>Yes"
+  label-no: "<red>No"
+
+main:
+  teleporting: "<prefix><green>Returned to the main world."
+  not-in-resource: "<prefix><yellow>You can only use this in a resource world."
+
+resource:
+  teleporting: "<prefix><green>Moved to <world>."
+  teleporting-last: "<prefix><green>Moved to where you last were in <world>. <gray>Run it again to go to the spawn."
+  location-not-saved: "<prefix><yellow>That spot was dangerous, so you will arrive at the spawn next time you go to <world>."
+  resetting: "<prefix><red><world> is being reset."
+  unavailable: "<prefix><red><world> is currently unavailable."
+  teleport-failed: "<prefix><red>Could not move you."
+  portal-resetting: "<prefix><red>The destination, <world>, is being reset."
+  portal-unavailable: "<prefix><red>The destination, <world>, is currently unavailable."
+
+login:
+  relocated: "<prefix><yellow>The world you were in has been reset, so you were moved."
+  respawn-cleared: "<prefix><yellow>Your respawn point in a reset world has been cleared."
+
+reset:
+  countdown: "<prefix><gold><world> will be reset in <yellow><time></yellow>."
+  cancelled: "<prefix><green>The reset of <world> was cancelled."
+  started: "<prefix><red>Starting the reset of <world>."
+  moved: "<prefix><yellow>You were moved to the main world because <world> is being reset."
+  kicked: "<red>You were disconnected because <world> is being reset. You can reconnect."
+  finished: "<prefix><green>The reset of <world> is complete."
+  failed: "<prefix><red>The reset of <world> failed. Check the console."
+  accepted-countdown: "<prefix><green>Announced the reset of <world> (in <time>)."
+  accepted-now: "<prefix><green>Resetting <world> now."
+  skipped-to-now: "<prefix><green>Skipping the countdown for <world> and resetting now."
+  already-active: "<prefix><yellow><world> is already being reset."
+  world-not-loaded: "<prefix><red><world> has not been created yet."
+  cancel-ok: "<prefix><green>Cancelled the countdown for <world>."
+  cancel-none: "<prefix><yellow>There is no countdown running for <world>."
+  cancel-too-late: "<prefix><red><world> is already being reset, so it cannot be cancelled."
+
+create:
+  started: "<prefix><yellow>Creating <world>..."
+  finished: "<prefix><green>Created <world>."
+  failed: "<prefix><red>Could not create <world>. Check the console."
+  already-exists: "<prefix><yellow><world> already exists."
+
+admin:
+  reload-ok: "<prefix><green>Settings reloaded."
+  reload-issues: "<prefix><yellow>Settings reloaded (issues: <count>. Check the console)."
+  reload-busy: "<prefix><red>Cannot reload during a reset."
+  seed-toggled: "<prefix><green>Changing the seed of <world> is now set to <value><green>."
+  status-header: "<prefix><aqua>── resource-core status ──"
+  status-world: "<gray><world> <dark_gray>(<key>)</dark_gray>: <state>"
+  status-world-detail: "<gray>  Loaded: <loaded> <gray>/ Players: <white><players></white> / Spawn: <white><spawn></white> / Border radius: <white><border></white> / Pre-generation: <pregen> <gray>/ Last reset: <white><last_reset></white> / Change seed: <change_seed>"
+
+travel-gui:
+  title: "<dark_aqua>World Travel"
+  main-name: "<green>Return to the main world"
+  main-lore:
+    - "<gray>Returns you to where you were just"
+    - "<gray>before entering a resource world."
+    - "<gray>Command: <white>/main"
+  world-name: "<aqua>Go to <world>"
+  world-lore:
+    - "<gray>Destination: <white><destination>"
+    - "<gray>Status: <state>"
+    - "<gray>Players inside: <white><players>"
+  destination-last: "Where you last were (<x>, <y>, <z>)"
+  destination-spawn: "Spawn"
+
+gui:
+  title: "<dark_aqua>resource-core Admin"
+  confirm-title: "<dark_red>Confirm Reset"
+  status-name: "<aqua><world>"
+  status-lore:
+    - "<gray>Key: <white><key>"
+    - "<gray>Status: <state>"
+    - "<gray>Loaded: <loaded>"
+    - "<gray>Players inside: <white><players>"
+    - "<gray>Pre-generation: <pregen>"
+    - "<gray>Last reset: <white><last_reset>"
+  reset-name: "<red>Reset"
+  reset-lore:
+    - "<gray>Opens the confirmation screen."
+    - "<gray>After confirming, the world is reset"
+    - "<gray>when the announced countdown ends."
+  cancel-name: "<yellow>Cancel the countdown"
+  cancel-lore:
+    - "<gray><white><time></white> left"
+  create-name: "<green>Create the world"
+  create-lore:
+    - "<gray>Click to create."
+  busy-name: "<gray>Processing"
+  busy-lore:
+    - "<gray>Status: <state>"
+  seed-name: "<yellow>Change the seed on reset: <value>"
+  seed-lore:
+    - "<gray>Click to switch."
+  teleport-name: "<aqua>Go to <world>"
+  teleport-lore:
+    - "<gray>Click to go to where you last were."
+    - "<gray>Goes to the spawn if there is no record"
+    - "<gray>or you are already in that world."
+  main-name: "<aqua>Return to the main world"
+  main-lore:
+    - "<gray>Returns you to where you were just"
+    - "<gray>before entering a resource world."
+  close-name: "<gray>Close"
+  confirm-name: "<red>Confirm"
+  confirm-lore:
+    - "<gray>Starts the reset of <world>."
+    - "<gray>Countdown: <white><time>"
+    - "<gray>Change the seed: <value>"
+  confirm-info-name: "<gold>Reset <world>?"
+  confirm-info-lore:
+    - "<gray>Players inside will be moved to the main world."
+    - "<gray>All builds and items in the world will be lost."
+  back-name: "<green>Back"
