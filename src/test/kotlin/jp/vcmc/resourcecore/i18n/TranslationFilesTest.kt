@@ -27,6 +27,6 @@ class TranslationFilesTest {
         assertEquals("1h 5m 30s", format(Language.ENGLISH))
         assertEquals("1小时5分钟30秒", format(Language.SIMPLIFIED_CHINESE))
         assertEquals("1小時5分鐘30秒", format(Language.TRADITIONAL_CHINESE_TAIWAN))
-        assertEquals("1個鐘5分鐘30秒", format(Language.TRADITIONAL_CHINESE_HONG_KONG))
+        assertEquals("1小時5分鐘30秒", format(Language.TRADITIONAL_CHINESE_HONG_KONG))
     }
 }

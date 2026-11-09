@@ -16,10 +16,7 @@ enum class Language(val code: String) {
         /** コンソールなど、プレイヤー以外へ送るときの言語。 */
         val DEFAULT = JAPANESE
 
-        /**
-         * Minecraft の言語設定から決める。対応していない言語のプレイヤーには English を使う。
-         * 繁體中文（香港）の文面は広東語で書いている。
-         */
+        /** Minecraft の言語設定から決める。対応していない言語のプレイヤーには English を使う。 */
         fun of(locale: Locale): Language = when (locale.language) {
             "ja" -> JAPANESE
             "zh" -> when (locale.country) {
