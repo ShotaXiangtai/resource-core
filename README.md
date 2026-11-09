@@ -24,7 +24,7 @@ Canvas の `EntityPortalAsyncEvent` はある場合だけ使うので、Folia �
 
 ## 導入手順
 
-1. `plugins/` に `worlds-4.5.0-all.jar`、`Chunky-Paper-1.5.66.jar`、`resource-core-1.3.0.jar` を入れます。
+1. `plugins/` に `worlds-4.5.0-all.jar`、`Chunky-Paper-1.5.66.jar`、`resource-core-1.3.1.jar` を入れます。
 2. サーバーを起動します。`resource:overworld` / `resource:nether` / `resource:the_end` が自動で作成され、事前生成が始まります。
 
 追加のワールドは `world/dimensions/<namespace>/<key>/` に作られます。デフォルトワールド（`minecraft:overworld` など）には触りません。
@@ -163,9 +163,11 @@ Worlds は **同じ namespace のワールド同士** を Environment でポー�
 | 繁體中文（香港） | 繁體中文（香港） | `lang/zh_hk.yml` |
 | 上記以外 | English | `lang/en.yml` |
 
-繁體中文（香港）の文面は広東語で書いています。コンソールへのメッセージとログは日本語のままです。
+コンソールへのメッセージとログは日本語のままです。
 
 `lang` フォルダのファイルは初回起動時に作られます。編集して `/resource-core reload` を実行すると反映されます。ファイルに無いキーは jar 内の既定の文面を使います。
+
+jar を更新しても、`lang` フォルダのファイルは置き換えません。ただし、以前の既定の文面のまま編集されていないファイルは、起動時に新しい文面へ置き換え、以前のファイルは名前の後ろに `.old` を付けて残します。1.3.0 の `lang/zh_hk.yml`（広東語の文面）がこれに当たります。編集したファイルはそのまま使うので、新しい文面にしたいときは削除して再読み込みしてください。
 
 `config.yml` の `reset.countdown` に書いた `message` は全員に同じ文面で送ります。`<world>` と `<time>` だけが受け取る人の言語になります。
 
@@ -258,4 +260,4 @@ Java 25 が必要です。
 ./gradlew build
 ```
 
-`build/libs/resource-core-1.3.0.jar` が生成されます（Kotlin 標準ライブラリを同梱）。
+`build/libs/resource-core-1.3.1.jar` が生成されます（Kotlin 標準ライブラリを同梱）。
